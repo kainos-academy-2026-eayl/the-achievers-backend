@@ -20,7 +20,7 @@ services:
       # Any .sql or .sh files in ./db/init run once, on first startup only
       - ./db/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dev} -d ${POSTGRES_DB:-app_dev}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dev} -d ${POSTGRES_DB:-app_dev}" ]
       interval: 5s
       timeout: 5s
       retries: 10
