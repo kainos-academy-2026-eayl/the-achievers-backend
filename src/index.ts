@@ -1,5 +1,8 @@
 import "dotenv/config";
 import { createApp } from "./app";
+import { createPrismaClient } from "./prismaClient";
+import { PrismaUserRepository } from "./repositories/userRepository";
+import { UserService } from "./services/userService";
 
 if (!process.env.PORT) {
 	throw new Error("PORT environment variable is not set");
@@ -12,11 +15,9 @@ if (!Number.isInteger(PORT) || PORT < 0 || PORT > 65535) {
 	throw new Error(`Invalid PORT: ${process.env.PORT}`);
 }
 
-const app = createApp();
-
-// Register new controllers / middleware here!
-
-// app.use('/', ...)
+const prisma = createPrismaClient();
+const userService = new UserService(new PrismaUserRepository(prisma));
+const app = createApp(userService);
 
 // Keep everything below this comment at the bottom of the file
 const server = app.listen(PORT, HOST, () => {
@@ -25,6 +26,14 @@ const server = app.listen(PORT, HOST, () => {
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
 	process.on(signal, () => {
-		server.close(() => process.exit(0));
+		server.close(() => {
+			void prisma
+				.$disconnect()
+				.then(() => process.exit(0))
+				.catch((error: unknown) => {
+					console.error("Failed to disconnect Prisma Client", error);
+					process.exitCode = 1;
+				});
+		});
 	});
 }

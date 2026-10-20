@@ -4,7 +4,11 @@ import { createApp } from "../src/app";
 
 describe("GET /health", () => {
 	it("returns a healthy response", async () => {
-		const app = createApp();
+		const app = createApp({
+			register: async () => {
+				throw new Error("Registration was not expected in this test");
+			},
+		});
 
 		const response = await request(app).get("/health");
 
