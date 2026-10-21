@@ -8,6 +8,7 @@ import type { UserRepository } from "../src/repositories/userRepository";
 
 const password = "LongEnoughPassword123!";
 const user = {
+	id: 1,
 	email: "customer@example.com",
 	name: "Customer",
 	passwordHash: "argon2-hash",
@@ -32,6 +33,7 @@ describe("user registration endpoints", () => {
 			createdAt: user.createdAt.toISOString(),
 		});
 		expect(response.body).not.toHaveProperty("passwordHash");
+		expect(response.body).not.toHaveProperty("id");
 		expect(register).toHaveBeenCalledWith({
 			name: user.name,
 			email: user.email,
