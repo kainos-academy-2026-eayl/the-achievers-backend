@@ -20,7 +20,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
     "@types/express": "5.0.6",
-    "@types/node": "26.4.1",
+    "@types/node": "^26.6.5",
     "@types/supertest": "^7.2.1",
     "esbuild": "0.28.2",
     "prisma": "^7.10.1",
