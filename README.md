@@ -4,8 +4,8 @@ The Achievers Backend API, built with Express, TypeScript, and Prisma.
 
 ## User registration
 
-`POST /api-register` (also available at `POST /api/auth/register`) accepts a
-JSON body containing `name`, `email`, and `password`:
+`POST /api/register` accepts a JSON body containing `name`, `email`, and
+`password`:
 
 ```json
 {

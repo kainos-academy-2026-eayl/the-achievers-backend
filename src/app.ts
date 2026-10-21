@@ -28,8 +28,7 @@ export function createApp(userService: Pick<UserService, "register">): Express {
 	});
 
 	const usersRouter = createUsersRouter(userService);
-	app.use("/api/auth/register", usersRouter);
-	app.use("/api-register", usersRouter);
+	app.use("/api/register", usersRouter);
 
 	app.use(
 		(error: unknown, _req: Request, res: Response, _next: NextFunction) => {

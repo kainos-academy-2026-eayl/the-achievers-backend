@@ -20,7 +20,7 @@ describe("user registration endpoints", () => {
 		const register = vi.fn().mockResolvedValue(user);
 		const app = createApp({ register });
 
-		const response = await request(app).post("/api-register").send({
+		const response = await request(app).post("/api/register").send({
 			name: " Customer ",
 			email: " CUSTOMER@example.com ",
 			password,
@@ -41,25 +41,24 @@ describe("user registration endpoints", () => {
 		});
 	});
 
-	it("keeps the existing /api/auth/register route available", async () => {
+	it("does not expose the old registration routes", async () => {
 		const register = vi.fn().mockResolvedValue(user);
 		const app = createApp({ register });
 
-		const response = await request(app).post("/api/auth/register").send({
-			name: user.name,
-			email: user.email,
-			password,
-		});
+		const responses = await Promise.all([
+			request(app).post("/api/auth/register"),
+			request(app).post("/api-register"),
+		]);
 
-		expect(response.status).toBe(201);
-		expect(register).toHaveBeenCalledOnce();
+		expect(responses.map((response) => response.status)).toEqual([404, 404]);
+		expect(register).not.toHaveBeenCalled();
 	});
 
 	it("rejects invalid registration data", async () => {
 		const register = vi.fn();
 		const app = createApp({ register });
 
-		const response = await request(app).post("/api/auth/register").send({
+		const response = await request(app).post("/api/register").send({
 			name: "Customer",
 			email: "not-an-email",
 			password: "short",
@@ -73,7 +72,7 @@ describe("user registration endpoints", () => {
 		const app = createApp({ register: vi.fn() });
 
 		const response = await request(app)
-			.post("/api/auth/register")
+			.post("/api/register")
 			.set("Content-Type", "application/json")
 			.send("{ invalid");
 
@@ -87,7 +86,7 @@ describe("user registration endpoints", () => {
 			.mockRejectedValue(new EmailAlreadyRegisteredError());
 		const app = createApp({ register });
 
-		const response = await request(app).post("/api/auth/register").send({
+		const response = await request(app).post("/api/register").send({
 			name: user.name,
 			email: user.email,
 			password,
