@@ -15,7 +15,7 @@ Use the project's version-matched CLI. Do not install a floating `prisma@latest`
 
 ## Boundary: Platform and Compute
 
-Do not confuse the stable ORM command (`prisma`) with the public-beta Platform package (`@prisma/cli`, binary `prisma-cli`). Use `prisma-compute` for Compute apps and workspace auth, and `prisma-postgres-setup` for Platform projects and databases.
+Do not confuse the stable ORM command (`prisma`) with the public-beta Platform package (`@prisma/cli`, binary `prisma-cli`).
 
 ## When to Apply
 

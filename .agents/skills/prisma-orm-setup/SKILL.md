@@ -25,11 +25,11 @@ Read the package manifest, lockfile, Prisma configuration, schema, and applicati
 
 For a new application, check the selected Prisma 8 release's [provider support](https://www.prisma.io/docs/orm/supported-databases) and runtime requirements before installing. If the provider is unsupported, explain the limitation and offer an explicitly selected earlier version. Keep the requested database; do not silently fall back or invent a supported target.
 
-Use an existing database when supplied. Load `prisma-postgres-setup` only when Prisma Postgres is needed and no connection has been selected yet; return here once connected.
+Use an existing database when supplied.
 
 ## 2. Handle requested major upgrades separately
 
-When the user requests a major upgrade, load a workflow that supports the source version and provider. For PostgreSQL 7-to-8, use the [Prisma migration guide](https://www.prisma.io/docs/guides/upgrade-prisma-orm/postgresql); for MongoDB 6-to-8, use [prisma-mongodb-upgrade](../prisma-mongodb-upgrade/SKILL.md). Other providers need an explicitly supported migration path. `prisma-upgrade-v7` covers **6 to 7**; the package-owned `prisma-8` upgrade reference covers updates within 8.
+When the user requests a major upgrade, use the official migration guide for the source version and provider. For PostgreSQL 7-to-8, use the [Prisma migration guide](https://www.prisma.io/docs/guides/upgrade-prisma-orm/postgresql). Other providers need an explicitly supported migration path.
 
 ## 3. Bootstrap a new Prisma 8 application
 
@@ -65,11 +65,10 @@ For a new setup that explicitly selects an earlier version, pin packages to that
 | -------------------------------- | --------------------------------------------------------- |
 | PostgreSQL                       | [PostgreSQL](references/v7-postgresql.md)                 |
 | MySQL / MariaDB / PlanetScale    | [MySQL](references/v7-mysql.md)                           |
-| SQLite / Turso                   | [SQLite](references/v7-sqlite.md)                         |
-| Microsoft SQL Server / Azure SQL | [SQL Server](references/v7-sqlserver.md)                  |
-| CockroachDB                      | [CockroachDB](references/v7-cockroachdb.md)               |
+| SQLite / Turso                   | [SQLite](references/v7-sqlite.md)                       |
+| Microsoft SQL Server / Azure SQL | [SQL Server](references/v7-sqlserver.md)               |
+| CockroachDB                      | [CockroachDB](references/v7-cockroachdb.md)             |
 | MongoDB / Atlas on Prisma 6      | [MongoDB](references/v6-mongodb.md)                       |
-| Prisma Postgres with Prisma 7    | [Prisma Postgres](references/v7-prisma-postgres.md)       |
 
 The Prisma 7 SQL examples were verified with Prisma 7.10.0; the MongoDB examples with Prisma 6.19.3.
 
