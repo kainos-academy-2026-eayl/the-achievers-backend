@@ -1,7 +1,9 @@
 import "dotenv/config";
 import { createApp } from "./app";
 import { createPrismaClient } from "./prismaClient";
+import { PrismaProductRepository } from "./repositories/productRepository";
 import { PrismaUserRepository } from "./repositories/userRepository";
+import { ProductService } from "./services/productService";
 import { UserService } from "./services/userService";
 
 if (!process.env.PORT) {
@@ -17,7 +19,8 @@ if (!Number.isInteger(PORT) || PORT < 0 || PORT > 65535) {
 
 const prisma = createPrismaClient();
 const userService = new UserService(new PrismaUserRepository(prisma));
-const app = createApp(userService);
+const productService = new ProductService(new PrismaProductRepository(prisma));
+const app = createApp(userService, productService);
 
 // Keep everything below this comment at the bottom of the file
 const server = app.listen(PORT, HOST, () => {

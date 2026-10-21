@@ -4,7 +4,9 @@ import express, {
 	type Request,
 	type Response,
 } from "express";
+import { createProductsRouter } from "./controllers/productController";
 import { createUsersRouter } from "./controllers/userController";
+import type { ProductService } from "./services/productService";
 import type { UserService } from "./services/userService";
 
 function getClientErrorStatus(error: unknown): number | undefined {
@@ -18,7 +20,10 @@ function getClientErrorStatus(error: unknown): number | undefined {
 		: undefined;
 }
 
-export function createApp(userService: Pick<UserService, "register">): Express {
+export function createApp(
+	userService: Pick<UserService, "register">,
+	productService: Pick<ProductService, "getAll">,
+): Express {
 	const app = express();
 
 	app.use(express.json({ limit: "10kb" }));
@@ -29,6 +34,7 @@ export function createApp(userService: Pick<UserService, "register">): Express {
 
 	const usersRouter = createUsersRouter(userService);
 	app.use("/api/register", usersRouter);
+	app.use("/api/products", createProductsRouter(productService));
 
 	app.use(
 		(error: unknown, _req: Request, res: Response, _next: NextFunction) => {

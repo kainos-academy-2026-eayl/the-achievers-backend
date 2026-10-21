@@ -19,3 +19,13 @@ model User {
   passwordHash String
   createdAt    DateTime @default(now())
 }
+
+model Product {
+  id          String   @id
+  name        String
+  description String?
+  category    String
+  price       Decimal? @db.Decimal(10, 2)
+  rating      Float?
+  reviewCount Int      @default(0)
+}
