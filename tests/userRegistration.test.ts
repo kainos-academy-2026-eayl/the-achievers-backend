@@ -7,6 +7,7 @@ import { UserService } from "../src/services/userService";
 import type { UserRepository } from "../src/repositories/userRepository";
 
 const password = "LongEnoughPassword123!";
+const noProducts = { getAll: async () => [], getById: async () => null };
 const user = {
 	id: 1,
 	email: "customer@example.com",
@@ -18,7 +19,7 @@ const user = {
 describe("user registration endpoints", () => {
 	it("registers a user and does not return the password hash", async () => {
 		const register = vi.fn().mockResolvedValue(user);
-		const app = createApp({ register });
+		const app = createApp({ register }, noProducts);
 
 		const response = await request(app).post("/api/register").send({
 			name: " Customer ",
@@ -43,7 +44,7 @@ describe("user registration endpoints", () => {
 
 	it("does not expose the old registration routes", async () => {
 		const register = vi.fn().mockResolvedValue(user);
-		const app = createApp({ register });
+		const app = createApp({ register }, noProducts);
 
 		const responses = await Promise.all([
 			request(app).post("/api/auth/register"),
@@ -56,7 +57,7 @@ describe("user registration endpoints", () => {
 
 	it("rejects invalid registration data", async () => {
 		const register = vi.fn();
-		const app = createApp({ register });
+		const app = createApp({ register }, noProducts);
 
 		const response = await request(app).post("/api/register").send({
 			name: "Customer",
@@ -69,7 +70,7 @@ describe("user registration endpoints", () => {
 	});
 
 	it("returns a client error for malformed JSON", async () => {
-		const app = createApp({ register: vi.fn() });
+		const app = createApp({ register: vi.fn() }, noProducts);
 
 		const response = await request(app)
 			.post("/api/register")
@@ -84,7 +85,7 @@ describe("user registration endpoints", () => {
 		const register = vi
 			.fn()
 			.mockRejectedValue(new EmailAlreadyRegisteredError());
-		const app = createApp({ register });
+		const app = createApp({ register }, noProducts);
 
 		const response = await request(app).post("/api/register").send({
 			name: user.name,

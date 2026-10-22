@@ -19,3 +19,13 @@ model User {
   passwordHash String
   createdAt    DateTime @default(now())
 }
+
+model Product {
+  id          String   @id
+  name        String
+  description String?
+  category    String
+  pricePence  Int?
+  rating      Float?
+  reviewCount Int      @default(0)
+}
