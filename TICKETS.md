@@ -1040,3 +1040,52 @@ A homepage provides customers with a clear entry point into the application and 
 ---
 ---
 
+# KAN-33: Create Shopping Cart
+## Description
+Customers should be able to view and manage the contents of their shopping cart before proceeding to checkout. The shopping cart should display all selected products, quantities, pricing information, and allow customers to update or remove items as needed.
+### Why are we carrying this out?
+Customers need a clear and convenient way to review and manage the products they intend to purchase before completing their order.
+### Work to Complete
+1. Create a shopping cart page that displays all items added to the cart.
+2. Display product name, price, quantity, and subtotal for each cart item.
+3. Allow customers to update product quantities within the cart.
+4. Allow customers to remove products from the cart.
+5. Display the total cost of all items in the cart.
+6. Show an appropriate message when the cart is empty.
+7. Ensure cart information updates correctly when quantities are changed or items are removed.
+## Acceptance Criteria
+1. A customer can view all products currently added to their shopping cart.
+2. Each cart item displays the correct product information, quantity, and pricing.
+3. A customer can update the quantity of a cart item.
+4. A customer can remove a product from the cart.
+5. The cart total updates automatically when quantities change or items are removed.
+7. An empty cart message is displayed when no products exist in the cart.
+8. Cart updates meet the platform's performance and availability requirements.
+## Test Scenarios
+- Scenario 1: View Cart Contents
+Given products have been added to the cart
+When the customer views their cart
+Then all products are displayed with the correct details, quantities, and prices
+- Scenario 2: Update Product Quantity
+Given a product exists in the cart
+When the customer changes the quantity
+Then the cart updates with the new quantity and correct pricing
+- Scenario 3: Remove Product from Cart
+Given a product exists in the cart
+When the customer removes the product
+Then the product is removed and the cart total is updated
+- Scenario 4: Verify Cart Total Calculation
+Given multiple products exist in the cart
+When the customer views the cart total
+Then the total reflects the combined value of all cart items
+- Scenario 5: Empty Cart
+Given no products exist in the cart
+When the customer navigates to the cart page
+Then an empty cart message is displayed
+- Scenario 6: Remove Last Item from Cart
+Given only one product exists in the cart
+When the customer removes the product
+Then the cart becomes empty and the empty cart message is displayed
+
+---
+---

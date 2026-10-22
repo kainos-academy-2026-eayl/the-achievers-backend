@@ -1,17 +1,15 @@
 import "dotenv/config";
 import { createApp } from "./app";
+import { PrismaCartRepository } from "./cart/cartRepository";
+import { CartService } from "./cart/cartService";
 import { createPrismaClient } from "./prismaClient";
 import { PrismaProductRepository } from "./products/productRepository";
 import { PrismaUserRepository } from "./userRegistration/userRepository";
 import { ProductService } from "./products/productService";
 import { UserService } from "./userRegistration/userService";
 
-if (!process.env.PORT) {
-	throw new Error("PORT environment variable is not set");
-}
-
 const HOST = "0.0.0.0";
-const PORT = Number(process.env.PORT);
+const PORT = Number(process.env.PORT ?? "3000");
 
 if (!Number.isInteger(PORT) || PORT < 0 || PORT > 65535) {
 	throw new Error(`Invalid PORT: ${process.env.PORT}`);
@@ -19,8 +17,18 @@ if (!Number.isInteger(PORT) || PORT < 0 || PORT > 65535) {
 
 const prisma = createPrismaClient();
 const userService = new UserService(new PrismaUserRepository(prisma));
-const productService = new ProductService(new PrismaProductRepository(prisma));
-const app = createApp(userService, productService);
+const productRepository = new PrismaProductRepository(prisma);
+const productService = new ProductService(productRepository);
+const cartService = new CartService(
+	new PrismaCartRepository(prisma),
+	productRepository,
+);
+const app = createApp(
+	userService,
+	productService,
+	cartService,
+	process.env.FRONTEND_ORIGIN ?? "http://localhost:8000",
+);
 
 // Keep everything below this comment at the bottom of the file
 const server = app.listen(PORT, HOST, () => {
