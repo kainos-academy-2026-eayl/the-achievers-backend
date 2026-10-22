@@ -1,9 +1,9 @@
 import type { ProductRepository } from "../repositories/productRepository";
 
 export class ProductService {
-    constructor(private readonly productRepository: ProductRepository) { }
+	constructor(private readonly productRepository: ProductRepository) {}
 
-    getAll() {
-        return this.productRepository.findAll();
-    }
+	getAll() {
+		return this.productRepository.findAll();
+	}
 }
