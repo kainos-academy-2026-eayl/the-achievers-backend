@@ -28,6 +28,7 @@ model Product {
   pricePence  Int?
   rating      Float?
   reviewCount Int        @default(0)
+  // Prisma's inverse relation; cart contents and quantities live in CartItem.
   cartItems   CartItem[]
 }
 

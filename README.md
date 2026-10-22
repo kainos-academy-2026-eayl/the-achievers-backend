@@ -102,6 +102,13 @@ quantity; they use a composite key of cart UUID and product ID. Adds use an
 atomic increment to avoid lost updates from concurrent requests. Deleting a
 cart or product also removes its cart items.
 
+The relationship is `Cart.items -> CartItem.product -> Product`. A cart holds
+an array of cart items rather than a direct product array so that each product
+can have a quantity within that cart. `Product.cartItems` is the inverse
+navigation field required by Prisma, not a column containing cart data in the
+product table. Cart and product references are enforced by database foreign
+keys.
+
 The schema is in [prisma/schema.prisma](./prisma/schema.prisma), and the cart
 migrations are
 [20261022110000_add_cart_items/migration.sql](./prisma/migrations/20261022110000_add_cart_items/migration.sql)
