@@ -41,6 +41,12 @@ export class PrismaCartRepository implements CartRepository {
 		productId: string,
 		quantity: number,
 	): Promise<void> {
+		await this.prisma.$executeRaw`
+			INSERT INTO "Cart" ("id")
+			VALUES (${cartId}::uuid)
+			ON CONFLICT ("id") DO NOTHING
+		`;
+
 		// A single upsert prevents lost increments, including simultaneous first adds.
 		const count = await this.prisma.$executeRaw`
 			INSERT INTO "CartItem" ("cartId", "productId", "quantity")

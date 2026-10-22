@@ -31,10 +31,16 @@ model Product {
   cartItems   CartItem[]
 }
 
+model Cart {
+  id    String     @id @db.Uuid
+  items CartItem[]
+}
+
 model CartItem {
   cartId    String  @db.Uuid
   productId String
   quantity  Int
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@id([cartId, productId])

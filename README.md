@@ -96,14 +96,19 @@ Products without a valid price cannot be added or updated (`409`); GET also
 returns `409` if an existing item no longer has a valid price, but it can still
 be removed. Errors use `{"error":"message"}`.
 
-Cart items persist in PostgreSQL with a composite key of cart UUID and product
-ID. Adds use an atomic increment to avoid lost updates from concurrent requests.
-Deleting a product also removes its cart items.
+Carts with items persist in PostgreSQL as `Cart` records. Each cart's products
+are represented by `CartItem` join records, which keep the per-product
+quantity; they use a composite key of cart UUID and product ID. Adds use an
+atomic increment to avoid lost updates from concurrent requests. Deleting a
+cart or product also removes its cart items.
 
 The schema is in [prisma/schema.prisma](./prisma/schema.prisma), and the cart
-migration is
-[20261022110000_add_cart_items/migration.sql](./prisma/migrations/20261022110000_add_cart_items/migration.sql).
-Apply it to your local database using the migration commands above before
+migrations are
+[20261022110000_add_cart_items/migration.sql](./prisma/migrations/20261022110000_add_cart_items/migration.sql)
+and
+[20261022130000_add_carts/migration.sql](./prisma/migrations/20261022130000_add_carts/migration.sql).
+The latter backfills cart records from existing cart items before adding the
+cart-item relation. Apply pending migrations using the commands above before
 starting the updated API. No seed changes are required.
 
 Example request:
@@ -115,18 +120,5 @@ curl http://localhost:3000/api/cart \
 
 ### Cart tests
 
-`npm test` runs the HTTP contract and validation tests alongside the existing
-tests. PostgreSQL integration tests additionally check persistence, cart
-isolation, concurrent adds, quantity limits and the migration's check constraint.
-To run them, use a separate, disposable test database, apply the migrations to it,
-and pass its URL:
-
-```sh
-export CART_TEST_DATABASE_URL="postgresql://user:password@localhost:5432/cart_test"
-DATABASE_URL="$CART_TEST_DATABASE_URL" npx prisma migrate deploy
-npx prisma generate
-npm test
-```
-
-Integration tests are skipped when `CART_TEST_DATABASE_URL` is unset.
-The tests clean up only the test products and cart IDs they create.
+`npm test` runs the cart HTTP contract and validation tests alongside the
+existing tests.
