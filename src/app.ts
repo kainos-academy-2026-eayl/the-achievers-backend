@@ -4,6 +4,7 @@ import express, {
 	type Request,
 	type Response,
 } from "express";
+import { type CartApiService, createCartRouter } from "./cart/cartController";
 import { createProductsRouter } from "./products/productController";
 import { createUsersRouter } from "./userRegistration/userController";
 import type { ProductService } from "./products/productService";
@@ -26,8 +27,27 @@ export function createApp(
 	userService: Pick<UserService, "register">,
 	productService: Pick<ProductService, "getAll" | "getById">,
 	loginService: Pick<LoginService, "login">,
+	cartService: CartApiService,
+	frontendOrigin = "http://localhost:8000",
 ): Express {
 	const app = express();
+
+	app.use((req, res, next) => {
+		res.vary("Origin");
+		if (req.get("Origin") === frontendOrigin) {
+			res.set("Access-Control-Allow-Origin", frontendOrigin);
+			if (req.method === "OPTIONS") {
+				res.set(
+					"Access-Control-Allow-Methods",
+					"GET, POST, PATCH, DELETE, OPTIONS",
+				);
+				res.set("Access-Control-Allow-Headers", "Content-Type, X-Cart-Id");
+				res.sendStatus(204);
+				return;
+			}
+		}
+		next();
+	});
 
 	app.use(express.json({ limit: "10kb" }));
 
@@ -39,6 +59,7 @@ export function createApp(
 	app.use("/api/register", usersRouter);
 	app.use("/api/products", createProductsRouter(productService));
 	app.use("/API/login", createLoginRouter(loginService));
+	app.use("/api/cart", createCartRouter(cartService));
 
 	app.use(
 		(error: unknown, _req: Request, res: Response, _next: NextFunction) => {

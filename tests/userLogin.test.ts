@@ -9,6 +9,7 @@ import { PrismaClient, type User } from "../src/generated/prisma/client";
 import { PrismaLoginRepository } from "../src/userLogin/loginRepository";
 import { LoginService } from "../src/userLogin/loginService";
 import { UserService } from "../src/userRegistration/userService";
+import { noCart } from "./helpers";
 
 const jwtSecret = "test-only-secret-not-for-production-123456789";
 const password = "LongEnoughPassword123!";
@@ -31,6 +32,7 @@ function createLoginApp(findByEmail = vi.fn().mockResolvedValue(user)) {
 		noRegistration,
 		noProducts,
 		new LoginService({ findByEmail }, jwtSecret),
+		noCart,
 	);
 }
 
@@ -125,7 +127,7 @@ describe("POST /API/login", () => {
 		{ email: user.email, password: "a".repeat(129) },
 	])("rejects invalid input %j without calling the service", async (body) => {
 		const login = vi.fn();
-		const app = createApp(noRegistration, noProducts, { login });
+		const app = createApp(noRegistration, noProducts, { login }, noCart);
 		const response = await request(app)
 			.post("/API/login")
 			.set("Content-Type", "application/json")

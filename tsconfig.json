@@ -29,9 +29,7 @@
   },
   "include": [
     "src/**/*",
-    "tests/userRegistration.test.ts",
-    "tests/products.test.ts",
-    "tests/userLogin.test.ts"
+    "tests/**/*"
   ],
   "exclude": [
     "node_modules",
