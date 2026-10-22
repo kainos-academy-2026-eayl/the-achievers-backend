@@ -21,11 +21,22 @@ model User {
 }
 
 model Product {
-  id          String   @id
+  id          String     @id
   name        String
   description String?
   category    String
   pricePence  Int?
   rating      Float?
-  reviewCount Int      @default(0)
+  reviewCount Int        @default(0)
+  cartItems   CartItem[]
+}
+
+model CartItem {
+  cartId    String  @db.Uuid
+  productId String
+  quantity  Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([cartId, productId])
+  @@index([productId])
 }

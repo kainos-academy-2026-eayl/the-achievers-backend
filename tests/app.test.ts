@@ -1,6 +1,7 @@
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 import { createApp } from "../src/app";
+import { noCart } from "./helpers";
 
 describe("GET /health", () => {
 	it("returns a healthy response", async () => {
@@ -11,6 +12,7 @@ describe("GET /health", () => {
 				},
 			},
 			{ getAll: async () => [], getById: async () => null },
+			noCart,
 		);
 
 		const response = await request(app).get("/health");

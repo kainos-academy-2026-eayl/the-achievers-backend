@@ -44,3 +44,89 @@ Apply pending migrations and regenerate the Prisma client before starting the AP
 npx prisma migrate deploy
 npx prisma generate
 ```
+
+## Shopping cart
+
+The API defaults to **http://localhost:3000** (`PORT` can override this).
+The frontend can stay on **http://localhost:8000**. Browser requests from that
+origin are allowed, including preflight requests with `X-Cart-Id`. Set
+`FRONTEND_ORIGIN` if the frontend uses a different origin.
+
+Every cart request must include `X-Cart-Id` containing the browser's cart UUID.
+Generate it once in the frontend (for example, with `crypto.randomUUID()`) and
+reuse it for that browser's cart. This is an anonymous cart identifier, not
+user authentication; keep it private and use HTTPS outside local development.
+
+| Method | Endpoint | JSON body | Behaviour |
+| --- | --- | --- | --- |
+| GET | `/api/cart` | None | Retrieve the cart |
+| POST | `/api/cart/items` | `{"productId":"cue-1","quantity":1}` | Add units, incrementing an existing item |
+| PATCH | `/api/cart/items/:productId` | `{"quantity":3}` | Set an existing item's quantity |
+| DELETE | `/api/cart/items/:productId` | None | Remove an item (safe to repeat) |
+
+All four endpoints return HTTP `200` with the current cart:
+
+```json
+{
+  "items": [
+    {
+      "product": {
+        "id": "cue-1",
+        "name": "Pro Series Maple Cue",
+        "price": 89.99
+      },
+      "quantity": 2
+    }
+  ]
+}
+```
+
+Product IDs must match products in the database; `cue-1` above is illustrative.
+Names and current prices always come from the backend product database, never
+the browser. Prices are stored as integer pence and returned as pounds. The
+frontend calculates each subtotal (`price * quantity`) and the combined total.
+A new or empty cart returns HTTP `200` with `{"items":[]}`; the frontend uses
+this to display its empty-cart message.
+
+Quantities must be integers from `1` to `2147483647`, including the resulting
+quantity after adding units. Use DELETE, not quantity zero, to remove a product.
+Missing/invalid cart UUIDs, invalid quantities and malformed bodies return `400`.
+Unknown products and PATCH requests for items not in that cart return `404`.
+Products without a valid price cannot be added or updated (`409`); GET also
+returns `409` if an existing item no longer has a valid price, but it can still
+be removed. Errors use `{"error":"message"}`.
+
+Cart items persist in PostgreSQL with a composite key of cart UUID and product
+ID. Adds use an atomic increment to avoid lost updates from concurrent requests.
+Deleting a product also removes its cart items.
+
+The schema is in [prisma/schema.prisma](./prisma/schema.prisma), and the cart
+migration is
+[20261022110000_add_cart_items/migration.sql](./prisma/migrations/20261022110000_add_cart_items/migration.sql).
+Apply it to your local database using the migration commands above before
+starting the updated API. No seed changes are required.
+
+Example request:
+
+```sh
+curl http://localhost:3000/api/cart \
+  -H 'X-Cart-Id: 8d0822af-42b7-4358-8dcd-88eabb610a30'
+```
+
+### Cart tests
+
+`npm test` runs the HTTP contract and validation tests alongside the existing
+tests. PostgreSQL integration tests additionally check persistence, cart
+isolation, concurrent adds, quantity limits and the migration's check constraint.
+To run them, use a separate, disposable test database, apply the migrations to it,
+and pass its URL:
+
+```sh
+export CART_TEST_DATABASE_URL="postgresql://user:password@localhost:5432/cart_test"
+DATABASE_URL="$CART_TEST_DATABASE_URL" npx prisma migrate deploy
+npx prisma generate
+npm test
+```
+
+Integration tests are skipped when `CART_TEST_DATABASE_URL` is unset.
+The tests clean up only the test products and cart IDs they create.
