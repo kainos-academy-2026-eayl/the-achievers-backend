@@ -12,6 +12,11 @@ describe("GET /health", () => {
 				},
 			},
 			{ getAll: async () => [], getById: async () => null },
+			{
+				login: async () => {
+					throw new Error("Login was not expected in this test");
+				},
+			},
 			noCart,
 		);
 

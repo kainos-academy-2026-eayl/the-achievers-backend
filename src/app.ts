@@ -9,6 +9,8 @@ import { createProductsRouter } from "./products/productController";
 import { createUsersRouter } from "./userRegistration/userController";
 import type { ProductService } from "./products/productService";
 import type { UserService } from "./userRegistration/userService";
+import { createLoginRouter } from "./userLogin/loginController";
+import type { LoginService } from "./userLogin/loginService";
 
 function getClientErrorStatus(error: unknown): number | undefined {
 	if (typeof error !== "object" || error === null || !("status" in error)) {
@@ -24,6 +26,7 @@ function getClientErrorStatus(error: unknown): number | undefined {
 export function createApp(
 	userService: Pick<UserService, "register">,
 	productService: Pick<ProductService, "getAll" | "getById">,
+	loginService: Pick<LoginService, "login">,
 	cartService: CartApiService,
 	frontendOrigin = "http://localhost:8000",
 ): Express {
@@ -55,6 +58,7 @@ export function createApp(
 	const usersRouter = createUsersRouter(userService);
 	app.use("/api/register", usersRouter);
 	app.use("/api/products", createProductsRouter(productService));
+	app.use("/api/login", createLoginRouter(loginService));
 	app.use("/api/cart", createCartRouter(cartService));
 
 	app.use(
