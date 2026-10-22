@@ -4,10 +4,10 @@ import express, {
 	type Request,
 	type Response,
 } from "express";
-import { createProductsRouter } from "./controllers/productController";
-import { createUsersRouter } from "./controllers/userController";
-import type { ProductService } from "./services/productService";
-import type { UserService } from "./services/userService";
+import { createProductsRouter } from "./products/productController";
+import { createUsersRouter } from "./userRegistration/userController";
+import type { ProductService } from "./products/productService";
+import type { UserService } from "./userRegistration/userService";
 
 function getClientErrorStatus(error: unknown): number | undefined {
 	if (typeof error !== "object" || error === null || !("status" in error)) {

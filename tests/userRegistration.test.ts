@@ -3,8 +3,8 @@ import request from "supertest";
 import { describe, expect, it, vi } from "vitest";
 import { createApp } from "../src/app";
 import { EmailAlreadyRegisteredError } from "../src/errors/emailAlreadyRegisteredError";
-import { UserService } from "../src/services/userService";
-import type { UserRepository } from "../src/repositories/userRepository";
+import { UserService } from "../src/userRegistration/userService";
+import type { UserRepository } from "../src/userRegistration/userRepository";
 
 const password = "LongEnoughPassword123!";
 const noProducts = { getAll: async () => [], getById: async () => null };
