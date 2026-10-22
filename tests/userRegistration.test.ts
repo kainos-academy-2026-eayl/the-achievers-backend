@@ -7,7 +7,7 @@ import { UserService } from "../src/services/userService";
 import type { UserRepository } from "../src/repositories/userRepository";
 
 const password = "LongEnoughPassword123!";
-const noProducts = { getAll: async () => [] };
+const noProducts = { getAll: async () => [], getById: async () => null };
 const user = {
 	id: 1,
 	email: "customer@example.com",

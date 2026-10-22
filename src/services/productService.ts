@@ -6,4 +6,8 @@ export class ProductService {
 	getAll() {
 		return this.productRepository.findAll();
 	}
+
+	getById(id: string) {
+		return this.productRepository.findById(id);
+	}
 }

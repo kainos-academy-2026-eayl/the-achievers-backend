@@ -8,7 +8,7 @@ const products: Prisma.ProductCreateInput[] = [
         description:
             "The precision automated pool cue. Motorised stroke control and laser-aligned tip deliver repeatable, pin-point accuracy on every shot.",
         category: "Calluminator Range",
-        price: 1499.99,
+        pricePence: 149999,
         rating: 4.8,
         reviewCount: 312,
     },
@@ -18,7 +18,7 @@ const products: Prisma.ProductCreateInput[] = [
         description:
             "Extension for the Calluminator. Dampens motor noise and cue-ball strike for whisper-quiet play in clubs and at home.",
         category: "Calluminator Range",
-        price: 129.99,
+        pricePence: 12999,
         rating: 4.6,
         reviewCount: 148,
     },
@@ -28,7 +28,7 @@ const products: Prisma.ProductCreateInput[] = [
         description:
             "Extension for the Calluminator. Magnified sighting scope with projected aim line for long pots and tight cuts.",
         category: "Calluminator Range",
-        price: 199.99,
+        pricePence: 19999,
         rating: 4.7,
         reviewCount: 203,
     },
@@ -38,7 +38,7 @@ const products: Prisma.ProductCreateInput[] = [
         description:
             "Lightweight padded helmet with clear visor that protects you from balls that fly off the table.",
         category: "Protective Gear",
-        price: 39.99,
+        pricePence: 3999,
         rating: 4.4,
         reviewCount: 87,
     },
@@ -48,7 +48,7 @@ const products: Prisma.ProductCreateInput[] = [
         description:
             "Impact-absorbing chest, arm and shin padding for spectators and players standing in the line of fire.",
         category: "Protective Gear",
-        price: 89.99,
+        pricePence: 8999,
         rating: 4.2,
         reviewCount: 54,
     },
@@ -58,7 +58,7 @@ const products: Prisma.ProductCreateInput[] = [
         description:
             "57-inch hand-finished maple cue with a 13mm tip and stainless steel joint.",
         category: "Pool Cues",
-        price: 89.99,
+        pricePence: 8999,
         rating: 4.5,
         reviewCount: 421,
     },
@@ -68,7 +68,7 @@ const products: Prisma.ProductCreateInput[] = [
         description:
             "Low-deflection carbon fibre shaft built for powerful, controlled break shots.",
         category: "Pool Cues",
-        price: 149.99,
+        pricePence: 14999,
         rating: 4.6,
         reviewCount: 96,
     },
@@ -78,7 +78,7 @@ const products: Prisma.ProductCreateInput[] = [
         description:
             "Water-resistant hard case holding two cues, with a padded interior and accessory pocket.",
         category: "Cue Cases",
-        price: 49.99,
+        pricePence: 4999,
         rating: 4.3,
         reviewCount: 178,
     },
@@ -88,7 +88,7 @@ const products: Prisma.ProductCreateInput[] = [
         description:
             "Full set of 16 phenolic resin balls, regulation 2 1/4-inch, matched for weight and balance.",
         category: "Pool Balls",
-        price: 64.99,
+        pricePence: 6499,
         rating: 4.7,
         reviewCount: 265,
     },
@@ -98,7 +98,7 @@ const products: Prisma.ProductCreateInput[] = [
         description:
             "Cue ball marked with reference dots so you can see spin and contact point on every shot.",
         category: "Pool Balls",
-        price: 12.99,
+        pricePence: 1299,
         rating: 4.1,
         reviewCount: 39,
     },
@@ -108,7 +108,7 @@ const products: Prisma.ProductCreateInput[] = [
         description:
             "Twelve cubes of premium chalk plus replacement tips, a tip shaper and a scuffer.",
         category: "Accessories",
-        price: 14.99,
+        pricePence: 1499,
         rating: 4.4,
         reviewCount: 512,
     },
@@ -117,7 +117,7 @@ const products: Prisma.ProductCreateInput[] = [
         name: "Wooden Triangle Rack",
         description: "Solid hardwood triangle rack for tight, consistent racks.",
         category: "Accessories",
-        price: 12.99,
+        pricePence: 1299,
         rating: 4.0,
         reviewCount: 61,
     },
@@ -126,7 +126,7 @@ const products: Prisma.ProductCreateInput[] = [
         name: "Fitted Pool Table Cover",
         description: null,
         category: "Accessories",
-        price: 34.99,
+        pricePence: 3499,
         rating: 4.2,
         reviewCount: 22,
     },
@@ -136,7 +136,7 @@ const products: Prisma.ProductCreateInput[] = [
         description:
             "Clip-on laser that shows whether your cue is travelling straight through the ball.",
         category: "Accessories",
-        price: null,
+        pricePence: null,
         rating: null,
         reviewCount: 0,
     },

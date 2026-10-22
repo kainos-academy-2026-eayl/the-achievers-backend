@@ -10,7 +10,7 @@ describe("GET /health", () => {
 					throw new Error("Registration was not expected in this test");
 				},
 			},
-			{ getAll: async () => [] },
+			{ getAll: async () => [], getById: async () => null },
 		);
 
 		const response = await request(app).get("/health");

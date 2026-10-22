@@ -22,7 +22,7 @@ function getClientErrorStatus(error: unknown): number | undefined {
 
 export function createApp(
 	userService: Pick<UserService, "register">,
-	productService: Pick<ProductService, "getAll">,
+	productService: Pick<ProductService, "getAll" | "getById">,
 ): Express {
 	const app = express();
 

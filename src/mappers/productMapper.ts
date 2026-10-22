@@ -16,8 +16,7 @@ export function toProductResponseDto(product: Product): ProductResponseDto {
 		name: product.name,
 		description: product.description,
 		category: product.category,
-		// Prisma Decimal serialises to a string in JSON, so send a number instead.
-		price: product.price === null ? null : product.price.toNumber(),
+		price: product.pricePence === null ? null : product.pricePence / 100,
 		rating: product.rating,
 		reviewCount: product.reviewCount,
 	};

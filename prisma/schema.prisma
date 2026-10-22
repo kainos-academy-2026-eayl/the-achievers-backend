@@ -25,7 +25,7 @@ model Product {
   name        String
   description String?
   category    String
-  price       Decimal? @db.Decimal(10, 2)
+  pricePence  Int?
   rating      Float?
   reviewCount Int      @default(0)
 }
