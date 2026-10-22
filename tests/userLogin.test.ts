@@ -36,11 +36,11 @@ function createLoginApp(findByEmail = vi.fn().mockResolvedValue(user)) {
 	);
 }
 
-describe("POST /API/login", () => {
+describe("POST /api/login", () => {
 	it("normalizes email and returns a verifiable, expiring JWT and safe user details", async () => {
 		const findByEmail = vi.fn().mockResolvedValue(user);
 		const response = await request(createLoginApp(findByEmail))
-			.post("/API/login")
+			.post("/api/login")
 			.send({ email: " CUSTOMER@example.com ", password });
 
 		expect(response.status).toBe(200);
@@ -99,7 +99,7 @@ describe("POST /API/login", () => {
 				.fn()
 				.mockResolvedValue(failure === "unknown email" ? null : user);
 			const response = await request(createLoginApp(findByEmail))
-				.post("/API/login")
+				.post("/api/login")
 				.send({ email: user.email, password: "incorrect" });
 
 			expect(response.status).toBe(401);
@@ -109,7 +109,7 @@ describe("POST /API/login", () => {
 
 	it("does not trim passwords", async () => {
 		const response = await request(createLoginApp())
-			.post("/API/login")
+			.post("/api/login")
 			.send({ email: user.email, password: ` ${password} ` });
 		expect(response.status).toBe(401);
 	});
@@ -129,7 +129,7 @@ describe("POST /API/login", () => {
 		const login = vi.fn();
 		const app = createApp(noRegistration, noProducts, { login }, noCart);
 		const response = await request(app)
-			.post("/API/login")
+			.post("/api/login")
 			.set("Content-Type", "application/json")
 			.send(JSON.stringify(body));
 
@@ -139,7 +139,7 @@ describe("POST /API/login", () => {
 
 	it("rejects malformed JSON", async () => {
 		const response = await request(createLoginApp())
-			.post("/API/login")
+			.post("/api/login")
 			.set("Content-Type", "application/json")
 			.send("{ invalid");
 		expect(response.status).toBe(400);
@@ -147,7 +147,7 @@ describe("POST /API/login", () => {
 
 	it("rejects oversized requests", async () => {
 		const response = await request(createLoginApp())
-			.post("/API/login")
+			.post("/api/login")
 			.send({ email: user.email, password: "a".repeat(11000) });
 		expect(response.status).toBe(413);
 	});
@@ -159,7 +159,7 @@ describe("POST /API/login", () => {
 			const response = await request(
 				createLoginApp(vi.fn().mockRejectedValue(error)),
 			)
-				.post("/API/login")
+				.post("/api/login")
 				.send({ email: user.email, password });
 
 			expect(response.status).toBe(500);

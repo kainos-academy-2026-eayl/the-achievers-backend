@@ -58,7 +58,7 @@ export function createApp(
 	const usersRouter = createUsersRouter(userService);
 	app.use("/api/register", usersRouter);
 	app.use("/api/products", createProductsRouter(productService));
-	app.use("/API/login", createLoginRouter(loginService));
+	app.use("/api/login", createLoginRouter(loginService));
 	app.use("/api/cart", createCartRouter(cartService));
 
 	app.use(
