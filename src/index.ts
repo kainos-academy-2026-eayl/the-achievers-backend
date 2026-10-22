@@ -1,10 +1,10 @@
 import "dotenv/config";
 import { createApp } from "./app";
 import { createPrismaClient } from "./prismaClient";
-import { PrismaProductRepository } from "./repositories/productRepository";
-import { PrismaUserRepository } from "./repositories/userRepository";
-import { ProductService } from "./services/productService";
-import { UserService } from "./services/userService";
+import { PrismaProductRepository } from "./products/productRepository";
+import { PrismaUserRepository } from "./userRegistration/userRepository";
+import { ProductService } from "./products/productService";
+import { UserService } from "./userRegistration/userService";
 
 if (!process.env.PORT) {
 	throw new Error("PORT environment variable is not set");

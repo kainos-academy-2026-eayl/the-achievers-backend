@@ -2,7 +2,7 @@ import { Router } from "express";
 import { parseRegisterUserDto } from "../dtos/registerUserDto";
 import { EmailAlreadyRegisteredError } from "../errors/emailAlreadyRegisteredError";
 import { toUserResponseDto } from "../mappers/userMapper";
-import type { UserService } from "../services/userService";
+import type { UserService } from "./userService";
 
 export function createUsersRouter(
 	userService: Pick<UserService, "register">,

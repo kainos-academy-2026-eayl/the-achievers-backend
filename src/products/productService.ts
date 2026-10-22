@@ -1,4 +1,4 @@
-import type { ProductRepository } from "../repositories/productRepository";
+import type { ProductRepository } from "./productRepository";
 
 export class ProductService {
 	constructor(private readonly productRepository: ProductRepository) {}

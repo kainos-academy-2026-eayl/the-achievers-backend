@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { toProductResponseDto } from "../mappers/productMapper";
-import type { ProductService } from "../services/productService";
+import type { ProductService } from "./productService";
 
 export function createProductsRouter(
 	productService: Pick<ProductService, "getAll" | "getById">,

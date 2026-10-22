@@ -1,6 +1,6 @@
 import * as argon2 from "argon2";
 import type { RegisterUserDto } from "../dtos/registerUserDto";
-import type { UserRepository } from "../repositories/userRepository";
+import type { UserRepository } from "./userRepository";
 
 type PasswordHasher = (password: string) => Promise<string>;
 
