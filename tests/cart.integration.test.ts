@@ -208,6 +208,26 @@ describe.skipIf(!databaseUrl)("cart PostgreSQL integration", () => {
 		expect(await prisma.cartItem.count({ where: { cartId } })).toBe(0);
 	});
 
+	it("rolls back additions when another cart item has no price", async () => {
+		await prisma.cartItem.create({
+			data: { cartId, productId: noPriceId, quantity: 2 },
+		});
+
+		expect((await add(cueId, 1)).status).toBe(409);
+		expect((await add(cueId, 1)).status).toBe(409);
+
+		expect(
+			await prisma.cartItem.findUnique({
+				where: { cartId_productId: { cartId, productId: cueId } },
+			}),
+		).toBeNull();
+		expect(
+			await prisma.cartItem.findUnique({
+				where: { cartId_productId: { cartId, productId: noPriceId } },
+			}),
+		).toMatchObject({ quantity: 2 });
+	});
+
 	it("enforces the positive quantity constraint in PostgreSQL", async () => {
 		await expect(
 			prisma.cartItem.create({

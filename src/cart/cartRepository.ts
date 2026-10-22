@@ -6,6 +6,7 @@ export type CartItemWithProduct = Prisma.CartItemGetPayload<{
 }>;
 
 export interface CartRepository {
+	transaction<T>(work: (repository: CartRepository) => Promise<T>): Promise<T>;
 	findByCartId(cartId: string): Promise<CartItemWithProduct[]>;
 	add(cartId: string, productId: string, quantity: number): Promise<void>;
 	setQuantity(
@@ -17,7 +18,15 @@ export interface CartRepository {
 }
 
 export class PrismaCartRepository implements CartRepository {
-	constructor(private readonly prisma: PrismaClient) {}
+	constructor(
+		private readonly prisma: Prisma.TransactionClient | PrismaClient,
+	) {}
+
+	transaction<T>(work: (repository: CartRepository) => Promise<T>): Promise<T> {
+		return this.prisma.$transaction((transaction) =>
+			work(new PrismaCartRepository(transaction)),
+		);
+	}
 
 	findByCartId(cartId: string): Promise<CartItemWithProduct[]> {
 		return this.prisma.cartItem.findMany({

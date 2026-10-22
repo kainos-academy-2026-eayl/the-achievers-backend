@@ -26,8 +26,12 @@ function setup() {
 		setQuantity: vi.fn<CartRepository["setQuantity"]>().mockResolvedValue(true),
 		remove: vi.fn<CartRepository["remove"]>().mockResolvedValue(undefined),
 	};
+	const transactionalRepository: CartRepository = {
+		...repository,
+		transaction: (work) => work(transactionalRepository),
+	};
 	const products = { findById: vi.fn().mockResolvedValue(product) };
-	const service = new CartService(repository, products);
+	const service = new CartService(transactionalRepository, products);
 	const app = createApp(
 		{ register: vi.fn() },
 		{ getAll: vi.fn(), getById: vi.fn() },
