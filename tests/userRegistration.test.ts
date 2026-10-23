@@ -107,7 +107,12 @@ describe("UserService", () => {
 		const repository: UserRepository = {
 			create: async (data) => {
 				persistedUser = data;
-				return { ...user, ...data };
+				return {
+					...user,
+					...data,
+					safeWordHint: data.safeWordHint ?? null,
+					safeWordHash: data.safeWordHash ?? null,
+				};
 			},
 		};
 		const service = new UserService(repository);
@@ -116,6 +121,8 @@ describe("UserService", () => {
 			name: user.name,
 			email: user.email,
 			password,
+			safeWordHint: "mothers-maiden-name",
+			safeWord: "mySafeWord",
 		});
 
 		expect(persistedUser).toBeDefined();
