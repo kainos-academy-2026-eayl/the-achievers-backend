@@ -7,12 +7,16 @@ import { UserService } from "../src/userRegistration/userService";
 import type { UserRepository } from "../src/userRegistration/userRepository";
 
 const password = "LongEnoughPassword123!";
+const safeWordHint = "first-pet";
+const safeWord = "Fluffy";
 const noProducts = { getAll: async () => [], getById: async () => null };
 const user = {
 	id: 1,
 	email: "customer@example.com",
 	name: "Customer",
 	passwordHash: "argon2-hash",
+	safeWordHint: null,
+	safeWordHash: null,
 	createdAt: new Date("2026-01-01T00:00:00.000Z"),
 };
 
@@ -25,6 +29,8 @@ describe("user registration endpoints", () => {
 			name: " Customer ",
 			email: " CUSTOMER@example.com ",
 			password,
+			safeWordHint,
+			safeWord,
 		});
 
 		expect(response.status).toBe(201);
@@ -39,6 +45,8 @@ describe("user registration endpoints", () => {
 			name: user.name,
 			email: user.email,
 			password,
+			safeWordHint,
+			safeWord,
 		});
 	});
 
@@ -63,6 +71,8 @@ describe("user registration endpoints", () => {
 			name: "Customer",
 			email: "not-an-email",
 			password: "short",
+			safeWordHint,
+			safeWord,
 		});
 
 		expect(response.status).toBe(400);
@@ -91,6 +101,8 @@ describe("user registration endpoints", () => {
 			name: user.name,
 			email: user.email,
 			password,
+			safeWordHint,
+			safeWord,
 		});
 
 		expect(response.status).toBe(409);
@@ -115,6 +127,8 @@ describe("UserService", () => {
 			name: user.name,
 			email: user.email,
 			password,
+			safeWordHint,
+			safeWord,
 		});
 
 		expect(persistedUser).toBeDefined();
