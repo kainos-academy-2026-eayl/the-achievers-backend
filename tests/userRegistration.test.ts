@@ -9,6 +9,7 @@ import { noCart } from "./helpers";
 
 const password = "LongEnoughPassword123!";
 const noProducts = { getAll: async () => [], getById: async () => null };
+const noLogin = { login: vi.fn() };
 const user = {
 	id: 1,
 	email: "customer@example.com",
@@ -20,7 +21,7 @@ const user = {
 describe("user registration endpoints", () => {
 	it("registers a user and does not return the password hash", async () => {
 		const register = vi.fn().mockResolvedValue(user);
-		const app = createApp({ register }, noProducts, noCart);
+		const app = createApp({ register }, noProducts, noLogin, noCart);
 
 		const response = await request(app).post("/api/register").send({
 			name: " Customer ",
@@ -45,7 +46,7 @@ describe("user registration endpoints", () => {
 
 	it("does not expose the old registration routes", async () => {
 		const register = vi.fn().mockResolvedValue(user);
-		const app = createApp({ register }, noProducts, noCart);
+		const app = createApp({ register }, noProducts, noLogin, noCart);
 
 		const responses = await Promise.all([
 			request(app).post("/api/auth/register"),
@@ -58,7 +59,7 @@ describe("user registration endpoints", () => {
 
 	it("rejects invalid registration data", async () => {
 		const register = vi.fn();
-		const app = createApp({ register }, noProducts, noCart);
+		const app = createApp({ register }, noProducts, noLogin, noCart);
 
 		const response = await request(app).post("/api/register").send({
 			name: "Customer",
@@ -71,7 +72,7 @@ describe("user registration endpoints", () => {
 	});
 
 	it("returns a client error for malformed JSON", async () => {
-		const app = createApp({ register: vi.fn() }, noProducts, noCart);
+		const app = createApp({ register: vi.fn() }, noProducts, noLogin, noCart);
 
 		const response = await request(app)
 			.post("/api/register")
@@ -86,7 +87,7 @@ describe("user registration endpoints", () => {
 		const register = vi
 			.fn()
 			.mockRejectedValue(new EmailAlreadyRegisteredError());
-		const app = createApp({ register }, noProducts, noCart);
+		const app = createApp({ register }, noProducts, noLogin, noCart);
 
 		const response = await request(app).post("/api/register").send({
 			name: user.name,
