@@ -19,6 +19,7 @@ export function createRequireAuth(jwtSecret: string) {
 				algorithms: ["HS256"],
 				issuer: TOKEN_ISSUER,
 				audience: TOKEN_AUDIENCE,
+				requiredClaims: ["exp"],
 			});
 			const userId = Number(payload.sub);
 			if (!Number.isSafeInteger(userId) || userId < 1) {
