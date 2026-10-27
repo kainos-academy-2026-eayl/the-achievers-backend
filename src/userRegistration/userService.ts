@@ -12,10 +12,10 @@ export class UserService {
 	) {}
 
 	async register(input: RegisterUserDto) {
-		const [passwordHash, safeWordHash] = await Promise.all([
-			this.hashPassword(input.password),
-			this.hashPassword(input.safeWord),
-		]);
+		const passwordHash = await this.hashPassword(input.password);
+		const safeWordHash = await argon2.hash(input.safeWord, {
+			type: argon2.argon2id,
+		});
 
 		return this.userRepository.create({
 			email: input.email,

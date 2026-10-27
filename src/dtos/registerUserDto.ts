@@ -20,8 +20,8 @@ export interface RegisterUserDto {
 }
 
 export type RegisterUserDtoResult =
-	| { success: true; data: RegisterUserDto; }
-	| { success: false; message: string; };
+	| { success: true; data: RegisterUserDto }
+	| { success: false; message: string };
 
 export function parseRegisterUserDto(body: unknown): RegisterUserDtoResult {
 	if (typeof body !== "object" || body === null || Array.isArray(body)) {
