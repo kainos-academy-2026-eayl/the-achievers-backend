@@ -1,7 +1,4 @@
-export interface LoginUserDto {
-	email: string;
-	password: string;
-}
+import type { LoginUserDto } from "../model/loginUserDto";
 
 export type LoginUserDtoResult =
 	| { success: true; data: LoginUserDto }

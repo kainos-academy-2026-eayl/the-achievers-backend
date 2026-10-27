@@ -1,8 +1,8 @@
 import * as argon2 from "argon2";
 import { SignJWT } from "jose";
-import type { LoginUserDto } from "../dtos/loginUserDto";
 import { InvalidCredentialsError } from "../errors/invalidCredentialsError";
 import { toUserResponseDto } from "../mappers/userMapper";
+import type { LoginUserDto } from "../model/loginUserDto";
 import type { LoginRepository } from "./loginRepository";
 
 // Verify a hash even for unknown users, avoiding a fast email-existence check.
