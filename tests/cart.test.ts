@@ -1,7 +1,10 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../src/app";
-import type { CartRepository } from "../src/cart/cartRepository";
+import type {
+	CartItemWithProduct,
+	CartRepository,
+} from "../src/cart/cartRepository";
 import { CartService } from "../src/cart/cartService";
 import { MAX_CART_QUANTITY } from "../src/dtos/cartDto";
 import { CartError } from "../src/errors/cartError";
@@ -18,6 +21,10 @@ const product: Product = {
 	reviewCount: 0,
 };
 const item = { cartId, productId: product.id, product, quantity: 2 };
+
+function withDestination(path: string): string {
+	return `${path}${path.includes("?") ? "&" : "?"}country=GB&postcode=SW1A%201AA`;
+}
 
 function setup() {
 	const repository = {
@@ -49,7 +56,7 @@ describe("cart API", () => {
 	it("returns the exact frontend response with a price in pounds", async () => {
 		context.repository.findByCartId.mockResolvedValue([item]);
 		const response = await request(context.app)
-			.get("/api/cart")
+			.get(withDestination("/api/cart"))
 			.set("X-Cart-Id", cartId.toUpperCase());
 
 		expect(response.status).toBe(200);
@@ -60,22 +67,119 @@ describe("cart API", () => {
 					quantity: 2,
 				},
 			],
+			estimatedShippingCost: 0,
 		});
 		expect(context.repository.findByCartId).toHaveBeenCalledWith(cartId);
 	});
 
 	it("returns 200 and an empty list for a new cart", async () => {
 		const response = await request(context.app)
-			.get("/api/cart")
+			.get(withDestination("/api/cart"))
 			.set("X-Cart-Id", cartId);
 		expect(response.status).toBe(200);
-		expect(response.body).toEqual({ items: [] });
+		expect(response.body).toEqual({ items: [], estimatedShippingCost: 0 });
+	});
+
+	it.each([
+		{ pricePence: 2_499, quantity: 2, estimate: 4.4 },
+		{ pricePence: 2_500, quantity: 2, estimate: 0 },
+		{ pricePence: 5_000, quantity: 1, estimate: 0 },
+	])(
+		"estimates shipping at the subtotal boundary %#",
+		async ({ pricePence, quantity, estimate }) => {
+			context.repository.findByCartId.mockResolvedValue([
+				{
+					...item,
+					product: { ...product, pricePence },
+					quantity,
+				},
+			]);
+			const response = await request(context.app)
+				.get(withDestination("/api/cart"))
+				.set("X-Cart-Id", cartId);
+			expect(response.status).toBe(200);
+			expect(response.body.estimatedShippingCost).toBe(estimate);
+		},
+	);
+
+	it("recalculates the estimate from current items after each mutation", async () => {
+		const lowPriceProduct = { ...product, pricePence: 2_495 };
+		const smallProduct = {
+			...product,
+			id: "chalk-1",
+			name: "Chalk",
+			pricePence: 10,
+		};
+		const productsById = new Map([
+			[lowPriceProduct.id, lowPriceProduct],
+			[smallProduct.id, smallProduct],
+		]);
+		const items: CartItemWithProduct[] = [];
+		const repository: CartRepository = {
+			transaction: (work) => work(repository),
+			findByCartId: async (id) =>
+				items.filter((cartItem) => cartItem.cartId === id),
+			add: async (id, productId, quantity) => {
+				const existing = items.find(
+					(cartItem) =>
+						cartItem.cartId === id && cartItem.productId === productId,
+				);
+				if (existing) {
+					existing.quantity += quantity;
+					return;
+				}
+				const productForItem = productsById.get(productId);
+				if (!productForItem) throw new Error("Missing test product");
+				items.push({
+					cartId: id,
+					productId,
+					product: productForItem,
+					quantity,
+				});
+			},
+			setQuantity: async (id, productId, quantity) => {
+				const existing = items.find(
+					(cartItem) =>
+						cartItem.cartId === id && cartItem.productId === productId,
+				);
+				if (!existing) return false;
+				existing.quantity = quantity;
+				return true;
+			},
+			remove: async (id, productId) => {
+				const index = items.findIndex(
+					(cartItem) =>
+						cartItem.cartId === id && cartItem.productId === productId,
+				);
+				if (index !== -1) items.splice(index, 1);
+			},
+		};
+		const service = new CartService(repository, {
+			findById: async (id) => productsById.get(id) ?? null,
+		});
+
+		expect(
+			(await service.add(cartId, lowPriceProduct.id, 1)).estimatedShippingCost,
+		).toBe(4.4);
+		expect(
+			(await service.add(cartId, smallProduct.id, 1)).estimatedShippingCost,
+		).toBe(4.4);
+		expect(
+			(await service.setQuantity(cartId, lowPriceProduct.id, 2))
+				.estimatedShippingCost,
+		).toBe(0);
+		expect(
+			(await service.remove(cartId, lowPriceProduct.id)).estimatedShippingCost,
+		).toBe(4.4);
+		expect(
+			(await service.remove(cartId, smallProduct.id)).estimatedShippingCost,
+		).toBe(0);
 	});
 
 	it("adds units and ignores browser-supplied product information", async () => {
 		context.repository.findByCartId.mockResolvedValue([item]);
 		const response = await request(context.app)
-			.post("/api/cart/items")
+			.post(withDestination("/api/cart/items"))
 			.set("X-Cart-Id", cartId)
 			.send({
 				productId: product.id,
@@ -90,6 +194,7 @@ describe("cart API", () => {
 			name: product.name,
 			price: 89.99,
 		});
+		expect(response.body.estimatedShippingCost).toBe(0);
 		expect(context.products.findById).toHaveBeenCalledWith(product.id);
 		expect(context.repository.add).toHaveBeenCalledWith(cartId, product.id, 2);
 	});
@@ -99,11 +204,12 @@ describe("cart API", () => {
 			{ ...item, quantity: 3 },
 		]);
 		const response = await request(context.app)
-			.patch(`/api/cart/items/${product.id}`)
+			.patch(withDestination(`/api/cart/items/${product.id}`))
 			.set("X-Cart-Id", cartId)
 			.send({ quantity: 3 });
 		expect(response.status).toBe(200);
 		expect(response.body.items[0].quantity).toBe(3);
+		expect(response.body.estimatedShippingCost).toBe(0);
 		expect(context.repository.setQuantity).toHaveBeenCalledWith(
 			cartId,
 			product.id,
@@ -113,10 +219,10 @@ describe("cart API", () => {
 
 	it("removes the last item and returns an empty cart", async () => {
 		const response = await request(context.app)
-			.delete(`/api/cart/items/${product.id}`)
+			.delete(withDestination(`/api/cart/items/${product.id}`))
 			.set("X-Cart-Id", cartId);
 		expect(response.status).toBe(200);
-		expect(response.body).toEqual({ items: [] });
+		expect(response.body).toEqual({ items: [], estimatedShippingCost: 0 });
 		expect(context.repository.remove).toHaveBeenCalledWith(cartId, product.id);
 	});
 
@@ -131,7 +237,7 @@ describe("cart API", () => {
 		"requires a UUID header for %s %s",
 		async (method, path) => {
 			for (const header of [undefined, "not-a-uuid", `${cartId},${cartId}`]) {
-				const pending = request(context.app)[method](path);
+				const pending = request(context.app)[method](withDestination(path));
 				if (header !== undefined) pending.set("X-Cart-Id", header);
 				const response = await pending.send({
 					productId: product.id,
@@ -147,12 +253,40 @@ describe("cart API", () => {
 		},
 	);
 
+	it.each(endpoints)(
+		"requires a UK shipping destination for %s %s",
+		async (method, path) => {
+			const response = await request(context.app)
+				[method](path)
+				.set("X-Cart-Id", cartId);
+			expect(response.status).toBe(400);
+			expect(response.body.error).toBe(
+				"A UK shipping country and postcode are required",
+			);
+			expect(context.repository.findByCartId).not.toHaveBeenCalled();
+			expect(context.repository.add).not.toHaveBeenCalled();
+			expect(context.repository.setQuantity).not.toHaveBeenCalled();
+			expect(context.repository.remove).not.toHaveBeenCalled();
+		},
+	);
+
+	it("rejects shipping destinations outside the UK", async () => {
+		const response = await request(context.app)
+			.get("/api/cart?country=US&postcode=10001")
+			.set("X-Cart-Id", cartId);
+		expect(response.status).toBe(400);
+		expect(response.body).toEqual({
+			error: "Shipping is only available to UK destinations",
+		});
+		expect(context.repository.findByCartId).not.toHaveBeenCalled();
+	});
+
 	it.each([0, -1, 1.5, "2", null, undefined, MAX_CART_QUANTITY + 1])(
 		"rejects invalid quantity %s for both add and update",
 		async (quantity) => {
 			for (const [method, path] of endpoints.slice(1, 3)) {
 				const response = await request(context.app)
-					[method](path)
+					[method](withDestination(path))
 					.set("X-Cart-Id", cartId)
 					.send({ productId: product.id, quantity });
 				expect(response.status).toBe(400);
@@ -166,7 +300,7 @@ describe("cart API", () => {
 		"rejects invalid add bodies %j",
 		async (body) => {
 			const response = await request(context.app)
-				.post("/api/cart/items")
+				.post(withDestination("/api/cart/items"))
 				.set("X-Cart-Id", cartId)
 				.send(body);
 			expect(response.status).toBe(400);
@@ -176,7 +310,7 @@ describe("cart API", () => {
 
 	it("rejects malformed JSON", async () => {
 		const response = await request(context.app)
-			.post("/api/cart/items")
+			.post(withDestination("/api/cart/items"))
 			.set("X-Cart-Id", cartId)
 			.set("Content-Type", "application/json")
 			.send("{ invalid");
@@ -189,7 +323,9 @@ describe("cart API", () => {
 			context.products.findById.mockResolvedValue(null);
 			const response = await request(context.app)
 				[method](
-					method === "post" ? "/api/cart/items" : "/api/cart/items/missing",
+					withDestination(
+						method === "post" ? "/api/cart/items" : "/api/cart/items/missing",
+					),
 				)
 				.set("X-Cart-Id", cartId)
 				.send({ productId: "missing", quantity: 1 });
@@ -203,7 +339,7 @@ describe("cart API", () => {
 		async (pricePence) => {
 			context.products.findById.mockResolvedValue({ ...product, pricePence });
 			const response = await request(context.app)
-				.post("/api/cart/items")
+				.post(withDestination("/api/cart/items"))
 				.set("X-Cart-Id", cartId)
 				.send({ productId: product.id, quantity: 1 });
 			expect(response.status).toBe(409);
@@ -216,7 +352,7 @@ describe("cart API", () => {
 			{ ...item, product: { ...product, pricePence: null } },
 		]);
 		const response = await request(context.app)
-			.get("/api/cart")
+			.get(withDestination("/api/cart"))
 			.set("X-Cart-Id", cartId);
 		expect(response.status).toBe(409);
 	});
@@ -224,7 +360,7 @@ describe("cart API", () => {
 	it("returns 404 rather than adding an item during PATCH", async () => {
 		context.repository.setQuantity.mockResolvedValue(false);
 		const response = await request(context.app)
-			.patch(`/api/cart/items/${product.id}`)
+			.patch(withDestination(`/api/cart/items/${product.id}`))
 			.set("X-Cart-Id", cartId)
 			.send({ quantity: 3 });
 		expect(response.status).toBe(404);
@@ -236,7 +372,7 @@ describe("cart API", () => {
 			new CartError("Quantity limit exceeded", 400),
 		);
 		const response = await request(context.app)
-			.post("/api/cart/items")
+			.post(withDestination("/api/cart/items"))
 			.set("X-Cart-Id", cartId)
 			.send({ productId: product.id, quantity: 1 });
 		expect(response.status).toBe(400);
@@ -249,7 +385,7 @@ describe("cart API", () => {
 			const log = vi.spyOn(console, "error").mockImplementation(() => {});
 			context.repository.findByCartId.mockRejectedValue(error);
 			const response = await request(context.app)
-				[method](path)
+				[method](withDestination(path))
 				.set("X-Cart-Id", cartId)
 				.send({ productId: product.id, quantity: 1 });
 			expect(response.status).toBe(500);
@@ -313,7 +449,7 @@ describe("frontend CORS", () => {
 			"https://shop.example",
 		);
 		const response = await request(app)
-			.get("/api/cart")
+			.get(withDestination("/api/cart"))
 			.set("X-Cart-Id", cartId)
 			.set("Origin", "https://shop.example");
 		expect(response.status).toBe(200);
