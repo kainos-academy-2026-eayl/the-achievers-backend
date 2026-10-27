@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import * as argon2 from "argon2";
 import type { Prisma } from "../src/generated/prisma/client";
 import { createPrismaClient } from "../src/prismaClient";
 
@@ -142,9 +144,45 @@ const products: Prisma.ProductCreateInput[] = [
     },
 ];
 
+type AdminSeed = { email: string; name: string; password: string };
+
+// Gitignored local file; copy admin.seed.example.json to create it.
+async function loadAdminSeed(): Promise<AdminSeed | null> {
+    try {
+        const raw = await readFile(
+            new URL("./admin.seed.json", import.meta.url),
+            "utf-8",
+        );
+        return JSON.parse(raw) as AdminSeed;
+    } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+        throw error;
+    }
+}
+
 const prisma = createPrismaClient();
 
 try {
+    const adminSeed = await loadAdminSeed();
+    if (adminSeed) {
+        const passwordHash = await argon2.hash(adminSeed.password, {
+            type: argon2.argon2id,
+        });
+        const user = await prisma.user.upsert({
+            where: { email: adminSeed.email },
+            update: { name: adminSeed.name, passwordHash },
+            create: { email: adminSeed.email, name: adminSeed.name, passwordHash },
+        });
+        await prisma.admin.upsert({
+            where: { userId: user.id },
+            update: {},
+            create: { userId: user.id },
+        });
+        console.log(`Seeded admin ${adminSeed.email}`);
+    } else {
+        console.log("No prisma/admin.seed.json found, skipping admin seed");
+    }
+
     for (const product of products) {
         await prisma.product.upsert({
             where: { id: product.id },
