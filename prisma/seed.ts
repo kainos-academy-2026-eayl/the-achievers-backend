@@ -177,10 +177,11 @@ try {
         const passwordHash = await argon2.hash(adminSeed.password, {
             type: argon2.argon2id,
         });
+        const email = adminSeed.email.trim().toLowerCase();
         const user = await prisma.user.upsert({
-            where: { email: adminSeed.email },
+            where: { email },
             update: { name: adminSeed.name, passwordHash },
-            create: { email: adminSeed.email, name: adminSeed.name, passwordHash },
+            create: { email, name: adminSeed.name, passwordHash },
         });
         await prisma.admin.upsert({
             where: { userId: user.id },
