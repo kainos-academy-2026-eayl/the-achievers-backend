@@ -22,6 +22,8 @@ model User {
   addressLine2 String?
   city         String?
   postcode     String?
+  safeWordHint String?
+  safeWordHash String?
   createdAt    DateTime @default(now())
 }
 

@@ -19,6 +19,8 @@ const user: User = {
 	name: "Customer",
 	passwordHash: "",
 	...emptyProfileFields,
+	safeWordHint: null,
+	safeWordHash: null,
 	createdAt: new Date("2026-01-01T00:00:00.000Z"),
 };
 const noRegistration = { register: vi.fn() };
@@ -183,6 +185,8 @@ describe("POST /api/login", () => {
 			name: user.name,
 			email: user.email,
 			password,
+			safeWordHint: "first-pet",
+			safeWord: "Fluffy",
 		});
 		const login = new LoginService(
 			{ findByEmail: async () => registeredUser },
