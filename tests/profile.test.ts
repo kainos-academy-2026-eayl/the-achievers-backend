@@ -29,17 +29,28 @@ function makeUser(id: number, email: string): User {
 
 function signToken(
 	sub: string,
-	options: { secret?: string; issuer?: string; expired?: boolean } = {},
+	options: {
+		secret?: string;
+		issuer?: string;
+		expired?: boolean;
+		withoutExpiration?: boolean;
+	} = {},
 ) {
 	const now = Math.floor(Date.now() / 1000);
-	return new SignJWT({})
+	const token = new SignJWT({})
 		.setProtectedHeader({ alg: "HS256", typ: "JWT" })
 		.setSubject(sub)
 		.setIssuer(options.issuer ?? "the-achievers-backend")
 		.setAudience("the-achievers-api")
-		.setIssuedAt(now - 7200)
-		.setExpirationTime(options.expired ? now - 3600 : now + 3600)
-		.sign(new TextEncoder().encode(options.secret ?? jwtSecret));
+		.setIssuedAt(now - 7200);
+	if (!options.withoutExpiration) {
+		token.setExpirationTime(options.expired ? now - 3600 : now + 3600);
+	}
+	return token.sign(new TextEncoder().encode(options.secret ?? jwtSecret));
+}
+
+async function bearerHeader(sub: string) {
+	return ["Bearer", await signToken(sub)].join(" ");
 }
 
 function setup() {
@@ -85,6 +96,22 @@ const validUpdate = {
 	currentPassword: "CorrectPassword123",
 };
 
+describe("CORS", () => {
+	it("allows Authorization in the profile preflight response", async () => {
+		const { app } = setup();
+		const response = await request(app)
+			.options("/api/me")
+			.set("Origin", "http://localhost:8000")
+			.set("Access-Control-Request-Method", "PATCH")
+			.set("Access-Control-Request-Headers", "authorization");
+
+		expect(response.status).toBe(204);
+		expect(response.headers["access-control-allow-headers"]).toContain(
+			"Authorization",
+		);
+	});
+});
+
 describe("GET /api/me", () => {
 	it("returns the logged-in customer's profile without sensitive fields", async () => {
 		const { app } = setup();
@@ -129,6 +156,7 @@ describe("GET /api/me", () => {
 
 	it.each([
 		["expired", { expired: true }],
+		["without expiration", { withoutExpiration: true }],
 		["wrong secret", { secret: "different-test-only-secret-123456789" }],
 		["wrong issuer", { issuer: "someone-else" }],
 	])("rejects %s tokens", async (_label, options) => {
@@ -185,6 +213,62 @@ describe("PATCH /api/me", () => {
 
 		expect(response.status).toBe(200);
 		expect(response.body).toMatchObject(emptyProfileFields);
+	});
+
+	it.each(["0712345678", "+44712345678"])(
+		"rejects incomplete UK mobile numbers: %s",
+		async (phone) => {
+			const { app, repository } = setup();
+			const response = await request(app)
+				.patch("/api/me")
+				.set("Authorization", await bearerHeader("1"))
+				.send({ ...validUpdate, phone });
+
+			expect(response.status).toBe(400);
+			expect(response.body.fieldErrors.phone).toBe(
+				"Enter a valid UK phone number, for example 07123 456789",
+			);
+			expect(repository.update).not.toHaveBeenCalled();
+		},
+	);
+
+	it("accepts a shorter UK landline number", async () => {
+		const { app } = setup();
+		const response = await request(app)
+			.patch("/api/me")
+			.set("Authorization", await bearerHeader("1"))
+			.send({ ...validUpdate, phone: "016977 1234" });
+
+		expect(response.status).toBe(200);
+		expect(response.body.phone).toBe("0169771234");
+	});
+
+	it.each(["ZZ99 9ZZ", "SW1A 1CI"])(
+		"rejects invalid UK postcodes: %s",
+		async (postcode) => {
+			const { app, repository } = setup();
+			const response = await request(app)
+				.patch("/api/me")
+				.set("Authorization", await bearerHeader("1"))
+				.send({ ...validUpdate, postcode });
+
+			expect(response.status).toBe(400);
+			expect(response.body.fieldErrors.postcode).toBe(
+				"Enter a valid UK postcode, for example SW1A 1AA",
+			);
+			expect(repository.update).not.toHaveBeenCalled();
+		},
+	);
+
+	it("accepts the GIR 0AA postcode exception", async () => {
+		const { app } = setup();
+		const response = await request(app)
+			.patch("/api/me")
+			.set("Authorization", await bearerHeader("1"))
+			.send({ ...validUpdate, postcode: "GIR 0AA" });
+
+		expect(response.status).toBe(200);
+		expect(response.body.postcode).toBe("GIR 0AA");
 	});
 
 	it("returns field errors for invalid data and saves nothing", async () => {

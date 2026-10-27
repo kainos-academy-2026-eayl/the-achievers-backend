@@ -48,7 +48,10 @@ export function createApp(
 					"Access-Control-Allow-Methods",
 					"GET, POST, PATCH, DELETE, OPTIONS",
 				);
-				res.set("Access-Control-Allow-Headers", "Content-Type, X-Cart-Id");
+				res.set(
+					"Access-Control-Allow-Headers",
+					"Content-Type, X-Cart-Id, Authorization",
+				);
 				res.sendStatus(204);
 				return;
 			}
