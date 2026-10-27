@@ -119,12 +119,7 @@ describe("UserService", () => {
 		const repository: UserRepository = {
 			create: async (data) => {
 				persistedUser = data;
-				return {
-					...user,
-					...data,
-					safeWordHint: data.safeWordHint ?? null,
-					safeWordHash: data.safeWordHash ?? null,
-				};
+				return { ...user, ...data };
 			},
 		};
 		const service = new UserService(repository);
@@ -142,6 +137,32 @@ describe("UserService", () => {
 		expect(persistedUser?.passwordHash.startsWith("$argon2id$")).toBe(true);
 		expect(
 			await argon2.verify(persistedUser?.passwordHash ?? "", password),
+		).toBe(true);
+	});
+
+	it("stores the safe-word hint and an Argon2id hash of the safe word", async () => {
+		let persistedUser: Parameters<UserRepository["create"]>[0] | undefined;
+		const repository: UserRepository = {
+			create: async (data) => {
+				persistedUser = data;
+				return { ...user, ...data };
+			},
+		};
+		const service = new UserService(repository);
+
+		await service.register({
+			name: user.name,
+			email: user.email,
+			password,
+			safeWordHint: "mothers-maiden-name",
+			safeWord: "mySafeWord",
+		});
+
+		expect(persistedUser?.safeWordHint).toBe("mothers-maiden-name");
+		expect(persistedUser?.safeWordHash).not.toBe("mySafeWord");
+		expect(persistedUser?.safeWordHash.startsWith("$argon2id$")).toBe(true);
+		expect(
+			await argon2.verify(persistedUser?.safeWordHash ?? "", "mySafeWord"),
 		).toBe(true);
 	});
 });
