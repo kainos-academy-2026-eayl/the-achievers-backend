@@ -17,7 +17,8 @@ export type UpdateProfileDtoResult =
 	| { success: false; message: string; fieldErrors: FieldErrors };
 
 const ukPhone = /^(?:0|\+44)\d{9,10}$/;
-const ukPostcode = /^([A-Z]{1,2}\d[A-Z\d]?) ?(\d[A-Z]{2})$/;
+const ukPostcode =
+	/^(GIR(?= ?0AA$)|[A-PR-UWYZ](?:\d{1,2}|[A-HK-Y]\d{1,2}|\d[A-HJKPSTUW]|[A-HK-Y]\d[ABEHMNPRVWXY])) ?(\d[ABD-HJLNP-UW-Z]{2})$/;
 
 export function parseUpdateProfileDto(body: unknown): UpdateProfileDtoResult {
 	if (typeof body !== "object" || body === null || Array.isArray(body)) {
