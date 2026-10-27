@@ -3,9 +3,9 @@ import request from "supertest";
 import { describe, expect, it, vi } from "vitest";
 import { createApp } from "../src/app";
 import { EmailAlreadyRegisteredError } from "../src/errors/emailAlreadyRegisteredError";
-import { UserService } from "../src/userRegistration/userService";
 import type { UserRepository } from "../src/userRegistration/userRepository";
-import { noCart } from "./helpers";
+import { UserService } from "../src/userRegistration/userService";
+import { emptyProfileFields, noCart } from "./helpers";
 
 const password = "LongEnoughPassword123!";
 const noProducts = { getAll: async () => [], getById: async () => null };
@@ -15,6 +15,7 @@ const user = {
 	email: "customer@example.com",
 	name: "Customer",
 	passwordHash: "argon2-hash",
+	...emptyProfileFields,
 	createdAt: new Date("2026-01-01T00:00:00.000Z"),
 };
 

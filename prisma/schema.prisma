@@ -17,6 +17,11 @@ model User {
   email        String   @unique
   name         String
   passwordHash String
+  phone        String?
+  addressLine1 String?
+  addressLine2 String?
+  city         String?
+  postcode     String?
   createdAt    DateTime @default(now())
 }
 
