@@ -143,5 +143,11 @@ describe("UserService", () => {
 		expect(
 			await argon2.verify(persistedUser?.passwordHash ?? "", password),
 		).toBe(true);
+		expect(persistedUser?.safeWordHint).toBe("mothers-maiden-name");
+		expect(persistedUser?.safeWordHash).not.toBe("mySafeWord");
+		expect(persistedUser?.safeWordHash?.startsWith("$argon2id$")).toBe(true);
+		expect(
+			await argon2.verify(persistedUser?.safeWordHash ?? "", "mySafeWord"),
+		).toBe(true);
 	});
 });
