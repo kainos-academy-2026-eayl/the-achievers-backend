@@ -4,3 +4,4 @@ dist/
 /src/generated/prisma
 .DS_Store
 /prisma/admin.seed.json
+code_reviews/

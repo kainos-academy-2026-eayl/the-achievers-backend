@@ -33,7 +33,10 @@ export class LoginService {
 			throw new InvalidCredentialsError();
 		}
 
-		const accessToken = await new SignJWT({})
+		const isAdmin = Boolean(user.admin);
+		const role = isAdmin ? "admin" : "user";
+
+		const accessToken = await new SignJWT({ role })
 			.setProtectedHeader({ alg: "HS256", typ: "JWT" })
 			.setSubject(String(user.id))
 			.setIssuer("the-achievers-backend")
