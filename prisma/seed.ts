@@ -165,6 +165,15 @@ const prisma = createPrismaClient();
 try {
     const adminSeed = await loadAdminSeed();
     if (adminSeed) {
+        if (
+            typeof adminSeed.password !== "string" ||
+            adminSeed.password.length < 12 ||
+            adminSeed.password.length > 128
+        ) {
+            throw new Error(
+                "Admin seed password must be between 12 and 128 characters long",
+            );
+        }
         const passwordHash = await argon2.hash(adminSeed.password, {
             type: argon2.argon2id,
         });
