@@ -136,6 +136,20 @@ npx prisma migrate deploy
 npx prisma generate
 ```
 
+### Seeding products and the admin account
+
+Run the Prisma seed with `ADMIN_PASSWORD` set to create or update the shared
+admin account in [prisma/admin.seed.json](./prisma/admin.seed.json). The committed
+seed file contains only the admin email and name; provide the password through
+the environment and never commit it:
+
+```sh
+ADMIN_PASSWORD='a-strong-password' npx prisma db seed
+```
+
+Without `ADMIN_PASSWORD`, admin seeding is skipped while product seeding still
+runs.
+
 ## Shopping cart
 
 The API defaults to **http://localhost:3000** (`PORT` can override this).
