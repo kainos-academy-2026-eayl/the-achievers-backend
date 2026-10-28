@@ -1,7 +1,8 @@
 import { CartError } from "../errors/cartError";
 import { toCartResponseDto } from "../mappers/cartMapper";
 import type { ProductRepository } from "../products/productRepository";
-import type { CartItemWithProduct, CartRepository } from "./cartRepository";
+import type { CartRepository } from "./cartRepository";
+import type { CartItemWithProduct } from "../model/cartItemWithProduct";
 
 const FREE_DELIVERY_THRESHOLD_PENCE = 5_000n;
 const ESTIMATED_SHIPPING_COST_PENCE = 440;
@@ -10,7 +11,7 @@ export class CartService {
 	constructor(
 		private readonly cartRepository: CartRepository,
 		private readonly productRepository: Pick<ProductRepository, "findById">,
-	) {}
+	) { }
 
 	async get(cartId: string) {
 		return this.getFromRepository(cartId, this.cartRepository);

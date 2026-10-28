@@ -2,13 +2,13 @@ import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../src/app";
 import type {
-	CartItemWithProduct,
 	CartRepository,
 } from "../src/cart/cartRepository";
 import { CartService } from "../src/cart/cartService";
 import { MAX_CART_QUANTITY } from "../src/dtos/cartDto";
 import { CartError } from "../src/errors/cartError";
 import type { Product } from "../src/generated/prisma/client";
+import type { CartItemWithProduct } from "../src/model/cartItemWithProduct";
 
 const cartId = "8d0822af-42b7-4358-8dcd-88eabb610a30";
 const product: Product = {
@@ -258,7 +258,7 @@ describe("cart API", () => {
 		"requires a UK shipping destination for %s %s",
 		async (method, path) => {
 			const response = await request(context.app)
-				[method](path)
+			[method](path)
 				.set("X-Cart-Id", cartId);
 			expect(response.status).toBe(400);
 			expect(response.body.error).toBe(
@@ -287,7 +287,7 @@ describe("cart API", () => {
 		async (quantity) => {
 			for (const [method, path] of endpoints.slice(1, 3)) {
 				const response = await request(context.app)
-					[method](withDestination(path))
+				[method](withDestination(path))
 					.set("X-Cart-Id", cartId)
 					.send({ productId: product.id, quantity });
 				expect(response.status).toBe(400);
@@ -323,11 +323,11 @@ describe("cart API", () => {
 		async (method) => {
 			context.products.findById.mockResolvedValue(null);
 			const response = await request(context.app)
-				[method](
-					withDestination(
-						method === "post" ? "/api/cart/items" : "/api/cart/items/missing",
-					),
-				)
+			[method](
+				withDestination(
+					method === "post" ? "/api/cart/items" : "/api/cart/items/missing",
+				),
+			)
 				.set("X-Cart-Id", cartId)
 				.send({ productId: "missing", quantity: 1 });
 			expect(response.status).toBe(404);
@@ -383,10 +383,10 @@ describe("cart API", () => {
 		"logs database failures without exposing details on %s",
 		async (method, path) => {
 			const error = new Error("private database connection details");
-			const log = vi.spyOn(console, "error").mockImplementation(() => {});
+			const log = vi.spyOn(console, "error").mockImplementation(() => { });
 			context.repository.findByCartId.mockRejectedValue(error);
 			const response = await request(context.app)
-				[method](withDestination(path))
+			[method](withDestination(path))
 				.set("X-Cart-Id", cartId)
 				.send({ productId: product.id, quantity: 1 });
 			expect(response.status).toBe(500);
