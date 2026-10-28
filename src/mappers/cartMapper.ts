@@ -1,5 +1,5 @@
-import type { CartItemWithProduct } from "../cart/cartRepository";
 import { CartError } from "../errors/cartError";
+import type { CartItemWithProduct } from "../model/cartItemWithProduct";
 
 export interface CartResponseDto {
 	items: {

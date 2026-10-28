@@ -1,7 +1,6 @@
 import { CartError } from "../errors/cartError";
 import type { Prisma, PrismaClient } from "../generated/prisma/client";
 import type { CartItemWithProduct } from "../model/cartItemWithProduct";
-export type { CartItemWithProduct } from "../model/cartItemWithProduct";
 
 export interface CartRepository {
 	transaction<T>(work: (repository: CartRepository) => Promise<T>): Promise<T>;

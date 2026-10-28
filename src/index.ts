@@ -7,6 +7,8 @@ import { PrismaProductRepository } from "./products/productRepository";
 import { PrismaUserRepository } from "./userRegistration/userRepository";
 import { ProductService } from "./products/productService";
 import { UserService } from "./userRegistration/userService";
+import { PrismaLoginRepository } from "./userLogin/loginRepository";
+import { LoginService } from "./userLogin/loginService";
 
 const HOST = "0.0.0.0";
 const PORT = Number(process.env.PORT ?? "3000");
@@ -15,10 +17,18 @@ if (!Number.isInteger(PORT) || PORT < 0 || PORT > 65535) {
 	throw new Error(`Invalid PORT: ${process.env.PORT}`);
 }
 
+if (!process.env.JWT_SECRET) {
+	throw new Error("JWT_SECRET environment variable is not set");
+}
+
 const prisma = createPrismaClient();
 const userService = new UserService(new PrismaUserRepository(prisma));
 const productRepository = new PrismaProductRepository(prisma);
 const productService = new ProductService(productRepository);
+const loginService = new LoginService(
+	new PrismaLoginRepository(prisma),
+	process.env.JWT_SECRET,
+);
 const cartService = new CartService(
 	new PrismaCartRepository(prisma),
 	productRepository,
@@ -26,6 +36,7 @@ const cartService = new CartService(
 const app = createApp(
 	userService,
 	productService,
+	loginService,
 	cartService,
 	process.env.FRONTEND_ORIGIN ?? "http://localhost:8000",
 );

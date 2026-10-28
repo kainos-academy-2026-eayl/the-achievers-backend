@@ -42,6 +42,7 @@ function setup() {
 	const app = createApp(
 		{ register: vi.fn() },
 		{ getAll: vi.fn(), getById: vi.fn() },
+		{ login: vi.fn() },
 		service,
 	);
 	return { repository, products, service, app };
@@ -445,6 +446,7 @@ describe("frontend CORS", () => {
 		const app = createApp(
 			{ register: vi.fn() },
 			{ getAll: vi.fn(), getById: vi.fn() },
+			{ login: vi.fn() },
 			service,
 			"https://shop.example",
 		);

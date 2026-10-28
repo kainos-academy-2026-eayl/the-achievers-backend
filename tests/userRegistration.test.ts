@@ -8,24 +8,31 @@ import type { UserRepository } from "../src/userRegistration/userRepository";
 import { noCart } from "./helpers";
 
 const password = "LongEnoughPassword123!";
+const safeWordHint = "first-pet";
+const safeWord = "Fluffy";
 const noProducts = { getAll: async () => [], getById: async () => null };
+const noLogin = { login: vi.fn() };
 const user = {
 	id: 1,
 	email: "customer@example.com",
 	name: "Customer",
 	passwordHash: "argon2-hash",
+	safeWordHint: null,
+	safeWordHash: null,
 	createdAt: new Date("2026-01-01T00:00:00.000Z"),
 };
 
 describe("user registration endpoints", () => {
 	it("registers a user and does not return the password hash", async () => {
 		const register = vi.fn().mockResolvedValue(user);
-		const app = createApp({ register }, noProducts, noCart);
+		const app = createApp({ register }, noProducts, noLogin, noCart);
 
 		const response = await request(app).post("/api/register").send({
 			name: " Customer ",
 			email: " CUSTOMER@example.com ",
 			password,
+			safeWordHint,
+			safeWord,
 		});
 
 		expect(response.status).toBe(201);
@@ -40,12 +47,14 @@ describe("user registration endpoints", () => {
 			name: user.name,
 			email: user.email,
 			password,
+			safeWordHint,
+			safeWord,
 		});
 	});
 
 	it("does not expose the old registration routes", async () => {
 		const register = vi.fn().mockResolvedValue(user);
-		const app = createApp({ register }, noProducts, noCart);
+		const app = createApp({ register }, noProducts, noLogin, noCart);
 
 		const responses = await Promise.all([
 			request(app).post("/api/auth/register"),
@@ -58,12 +67,14 @@ describe("user registration endpoints", () => {
 
 	it("rejects invalid registration data", async () => {
 		const register = vi.fn();
-		const app = createApp({ register }, noProducts, noCart);
+		const app = createApp({ register }, noProducts, noLogin, noCart);
 
 		const response = await request(app).post("/api/register").send({
 			name: "Customer",
 			email: "not-an-email",
 			password: "short",
+			safeWordHint,
+			safeWord,
 		});
 
 		expect(response.status).toBe(400);
@@ -71,7 +82,7 @@ describe("user registration endpoints", () => {
 	});
 
 	it("returns a client error for malformed JSON", async () => {
-		const app = createApp({ register: vi.fn() }, noProducts, noCart);
+		const app = createApp({ register: vi.fn() }, noProducts, noLogin, noCart);
 
 		const response = await request(app)
 			.post("/api/register")
@@ -86,12 +97,14 @@ describe("user registration endpoints", () => {
 		const register = vi
 			.fn()
 			.mockRejectedValue(new EmailAlreadyRegisteredError());
-		const app = createApp({ register }, noProducts, noCart);
+		const app = createApp({ register }, noProducts, noLogin, noCart);
 
 		const response = await request(app).post("/api/register").send({
 			name: user.name,
 			email: user.email,
 			password,
+			safeWordHint,
+			safeWord,
 		});
 
 		expect(response.status).toBe(409);
@@ -116,6 +129,8 @@ describe("UserService", () => {
 			name: user.name,
 			email: user.email,
 			password,
+			safeWordHint: "mothers-maiden-name",
+			safeWord: "mySafeWord",
 		});
 
 		expect(persistedUser).toBeDefined();
@@ -124,5 +139,135 @@ describe("UserService", () => {
 		expect(
 			await argon2.verify(persistedUser?.passwordHash ?? "", password),
 		).toBe(true);
+		expect(persistedUser?.safeWordHint).toBe("mothers-maiden-name");
+		expect(persistedUser?.safeWordHash).not.toBe("mySafeWord");
+		expect(persistedUser?.safeWordHash?.startsWith("$argon2id$")).toBe(true);
+		expect(
+			await argon2.verify(persistedUser?.safeWordHash ?? "", "mySafeWord"),
+		).toBe(true);
+	});
+
+	it("stores the safe-word hint and an Argon2id hash of the safe word", async () => {
+		let persistedUser: Parameters<UserRepository["create"]>[0] | undefined;
+		const repository: UserRepository = {
+			create: async (data) => {
+				persistedUser = data;
+				return { ...user, ...data };
+			},
+		};
+		const service = new UserService(repository);
+
+		await service.register({
+			name: user.name,
+			email: user.email,
+			password,
+			safeWordHint: "mothers-maiden-name",
+			safeWord: "mySafeWord",
+		});
+
+		expect(persistedUser?.safeWordHint).toBe("mothers-maiden-name");
+		expect(persistedUser?.safeWordHash).not.toBe("mySafeWord");
+		expect(persistedUser?.safeWordHash?.startsWith("$argon2id$")).toBe(true);
+		expect(
+			await argon2.verify(persistedUser?.safeWordHash ?? "", "mySafeWord"),
+		).toBe(true);
+	});
+
+	it("rejects registration when safeWordHint is missing", async () => {
+		const register = vi.fn();
+		const app = createApp({ register }, noProducts, noLogin, noCart);
+
+		const response = await request(app).post("/api/register").send({
+			name: user.name,
+			email: user.email,
+			password,
+			safeWord,
+		});
+
+		expect(response.status).toBe(400);
+		expect(register).not.toHaveBeenCalled();
+	});
+
+	it("rejects registration when safeWordHint is unknown", async () => {
+		const register = vi.fn();
+		const app = createApp({ register }, noProducts, noLogin, noCart);
+
+		const response = await request(app).post("/api/register").send({
+			name: user.name,
+			email: user.email,
+			password,
+			safeWord,
+			safeWordHint: "unknown-hint",
+		});
+
+		expect(response.status).toBe(400);
+		expect(register).not.toHaveBeenCalled();
+	});
+
+	it("rejects registration when safeWord is not a string", async () => {
+		const register = vi.fn();
+		const app = createApp({ register }, noProducts, noLogin, noCart);
+
+		const response = await request(app).post("/api/register").send({
+			name: user.name,
+			email: user.email,
+			password,
+			safeWordHint,
+			safeWord: 123,
+		});
+
+		expect(response.status).toBe(400);
+		expect(register).not.toHaveBeenCalled();
+	});
+
+	it("rejects registration when safeWord is blank", async () => {
+		const register = vi.fn();
+		const app = createApp({ register }, noProducts, noLogin, noCart);
+
+		const response = await request(app).post("/api/register").send({
+			name: user.name,
+			email: user.email,
+			password,
+			safeWordHint,
+			safeWord: "",
+		});
+
+		expect(response.status).toBe(400);
+		expect(register).not.toHaveBeenCalled();
+	});
+
+	it("accepts a 128 character safeWord", async () => {
+		const register = vi.fn().mockResolvedValue(user);
+		const app = createApp({ register }, noProducts, noLogin, noCart);
+
+		const response = await request(app)
+			.post("/api/register")
+			.send({
+				name: user.name,
+				email: user.email,
+				password,
+				safeWordHint,
+				safeWord: "a".repeat(128),
+			});
+
+		expect(response.status).toBe(201);
+	});
+
+	it("rejects a 129 character safeWord", async () => {
+		const register = vi.fn();
+		const app = createApp({ register }, noProducts, noLogin, noCart);
+
+		const response = await request(app)
+			.post("/api/register")
+			.send({
+				name: user.name,
+				email: user.email,
+				password,
+				safeWordHint,
+				safeWord: "a".repeat(129),
+			});
+
+		expect(response.status).toBe(400);
+		expect(register).not.toHaveBeenCalled();
 	});
 });
