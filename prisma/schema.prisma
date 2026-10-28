@@ -21,8 +21,14 @@ model User {
   safeWordHint String?
   safeWordHash String?
   createdAt    DateTime @default(now())
- 
-  user UserAddresses[]
+  admin        Admin?
+}
+
+model Admin {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
 }
  
 model Product {
