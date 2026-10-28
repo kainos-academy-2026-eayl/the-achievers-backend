@@ -1,9 +1,7 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../src/app";
-import type {
-	CartRepository,
-} from "../src/cart/cartRepository";
+import type { CartRepository } from "../src/cart/cartRepository";
 import { CartService } from "../src/cart/cartService";
 import { MAX_CART_QUANTITY } from "../src/dtos/cartDto";
 import { CartError } from "../src/errors/cartError";
@@ -258,7 +256,7 @@ describe("cart API", () => {
 		"requires a UK shipping destination for %s %s",
 		async (method, path) => {
 			const response = await request(context.app)
-			[method](path)
+			[method](withDestination(path))
 				.set("X-Cart-Id", cartId);
 			expect(response.status).toBe(400);
 			expect(response.body.error).toBe(
