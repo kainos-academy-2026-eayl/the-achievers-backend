@@ -13,7 +13,10 @@
     "lint": "biome lint src",
     "format": "biome format --write src tests",
     "format:check": "biome format src tests",
-    "test": "vitest run"
+    "test": "vitest run",
+    "migrate": "npx prisma migrate dev",
+    "seed": "npx prisma db seed",
+    "migrateExisting": "npx prisma migrate deploy"
   },
   "keywords": [],
   "author": "",
