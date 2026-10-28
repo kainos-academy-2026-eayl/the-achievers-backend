@@ -12,7 +12,6 @@ export class CartService {
 		private readonly cartRepository: CartRepository,
 		private readonly productRepository: Pick<ProductRepository, "findById">,
 	) { }
-
 	async get(cartId: string) {
 		return this.getFromRepository(cartId, this.cartRepository);
 	}
