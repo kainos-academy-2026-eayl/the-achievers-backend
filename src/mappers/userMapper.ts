@@ -1,4 +1,5 @@
 import type { User } from "../generated/prisma/client";
+import type { ProfileUser } from "../profile/profileRepository";
 
 export interface UserResponseDto {
 	email: string;
@@ -16,13 +17,21 @@ export function toUserResponseDto(user: User): UserResponseDto {
 
 export interface ProfileResponseDto extends UserResponseDto {
 	phone: string | null;
+	addressLine1: string | null;
+	addressLine2: string | null;
+	city: string | null;
+	postcode: string | null;
 }
 
-export function toProfileResponseDto(user: User): ProfileResponseDto {
+export function toProfileResponseDto(user: ProfileUser): ProfileResponseDto {
+	const address = user.user[0];
+
 	return {
 		...toUserResponseDto(user),
 		phone: user.phone,
-		email: user.email,
-		name: user.name,
+		addressLine1: address?.addressLine1 ?? null,
+		addressLine2: address?.addressLine2 ?? null,
+		city: address?.city ?? null,
+		postcode: address?.postcode ?? null,
 	};
 }

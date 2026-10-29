@@ -3,10 +3,10 @@ import request from "supertest";
 import { describe, expect, it, vi } from "vitest";
 import { createApp } from "../src/app";
 import { EmailAlreadyRegisteredError } from "../src/errors/emailAlreadyRegisteredError";
-import type { User } from "../src/generated/prisma/client";
 import type {
 	ProfileRepository,
 	ProfileUpdateData,
+	ProfileUser,
 } from "../src/profile/profileRepository";
 import { ProfileService } from "../src/profile/profileService";
 import { emptyProfileFields, noCart } from "./helpers";
@@ -14,13 +14,14 @@ import { emptyProfileFields, noCart } from "./helpers";
 const jwtSecret = "test-only-secret-not-for-production-123456789";
 const createdAt = new Date("2026-01-01T00:00:00.000Z");
 
-function makeUser(id: number, email: string): User {
+function makeUser(id: number, email: string): ProfileUser {
 	return {
 		id,
 		email,
 		name: `Customer ${id}`,
 		passwordHash: `hash-for-${id}`,
-		...emptyProfileFields,
+		phone: null,
+		user: [],
 		safeWordHint: null,
 		safeWordHash: null,
 		createdAt,
@@ -54,7 +55,7 @@ async function bearerHeader(sub: string) {
 }
 
 function setup() {
-	const users = new Map<number, User>([
+	const users = new Map<number, ProfileUser>([
 		[1, makeUser(1, "first@example.com")],
 		[2, makeUser(2, "second@example.com")],
 	]);
@@ -65,7 +66,16 @@ function setup() {
 				(other) => other.id !== id && other.email === data.email,
 			);
 			if (taken) throw new EmailAlreadyRegisteredError();
-			const updated = { ...(users.get(id) as User), ...data };
+			const existing = users.get(id) as ProfileUser;
+			const { addressLine1, addressLine2, city, postcode, ...userData } = data;
+			const addressData = { addressLine1, addressLine2, city, postcode };
+			const existingAddress = existing.user[0];
+			const user = existingAddress
+				? [{ ...existingAddress, ...addressData }]
+				: Object.values(addressData).some((value) => value !== null)
+					? [{ addressId: id, userId: id, ...addressData }]
+					: [];
+			const updated = { ...existing, ...userData, user };
 			users.set(id, updated);
 			return updated;
 		}),
