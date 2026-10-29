@@ -21,7 +21,11 @@ const user: User = {
 	createdAt: new Date("2026-01-01T00:00:00.000Z"),
 };
 const noRegistration = { register: vi.fn() };
-const noProducts = { getAll: async () => [], getById: async () => null };
+const noProducts = {
+	getAll: async () => [],
+	getById: async () => null,
+	delete: vi.fn(),
+};
 
 beforeAll(async () => {
 	user.passwordHash = await argon2.hash(password, { type: argon2.argon2id });
@@ -33,6 +37,7 @@ function createLoginApp(findByEmail = vi.fn().mockResolvedValue(user)) {
 		noProducts,
 		new LoginService({ findByEmail }, jwtSecret),
 		noCart,
+		jwtSecret,
 	);
 }
 
@@ -142,7 +147,13 @@ describe("POST /api/login", () => {
 		{ email: user.email, password: "a".repeat(129) },
 	])("rejects invalid input %j without calling the service", async (body) => {
 		const login = vi.fn();
-		const app = createApp(noRegistration, noProducts, { login }, noCart);
+		const app = createApp(
+			noRegistration,
+			noProducts,
+			{ login },
+			noCart,
+			jwtSecret,
+		);
 		const response = await request(app)
 			.post("/api/login")
 			.set("Content-Type", "application/json")

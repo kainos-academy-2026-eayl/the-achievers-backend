@@ -6,6 +6,7 @@ import { CartService } from "../src/cart/cartService";
 import { MAX_CART_QUANTITY } from "../src/dtos/cartDto";
 import { CartError } from "../src/errors/cartError";
 import type { Product } from "../src/generated/prisma/client";
+import { testJwtSecret } from "./helpers";
 
 const cartId = "8d0822af-42b7-4358-8dcd-88eabb610a30";
 const product: Product = {
@@ -34,9 +35,10 @@ function setup() {
 	const service = new CartService(transactionalRepository, products);
 	const app = createApp(
 		{ register: vi.fn() },
-		{ getAll: vi.fn(), getById: vi.fn() },
+		{ getAll: vi.fn(), getById: vi.fn(), delete: vi.fn() },
 		{ login: vi.fn() },
 		service,
+		testJwtSecret,
 	);
 	return { repository, products, service, app };
 }
@@ -309,9 +311,10 @@ describe("frontend CORS", () => {
 		const { service } = setup();
 		const app = createApp(
 			{ register: vi.fn() },
-			{ getAll: vi.fn(), getById: vi.fn() },
+			{ getAll: vi.fn(), getById: vi.fn(), delete: vi.fn() },
 			{ login: vi.fn() },
 			service,
+			testJwtSecret,
 			"https://shop.example",
 		);
 		const response = await request(app)

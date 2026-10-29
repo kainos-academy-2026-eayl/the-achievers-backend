@@ -5,10 +5,14 @@ import { createApp } from "../src/app";
 import { EmailAlreadyRegisteredError } from "../src/errors/emailAlreadyRegisteredError";
 import { UserService } from "../src/userRegistration/userService";
 import type { UserRepository } from "../src/userRegistration/userRepository";
-import { noCart } from "./helpers";
+import { noCart, testJwtSecret } from "./helpers";
 
 const password = "LongEnoughPassword123!";
-const noProducts = { getAll: async () => [], getById: async () => null };
+const noProducts = {
+	getAll: async () => [],
+	getById: async () => null,
+	delete: vi.fn(),
+};
 const noLogin = { login: vi.fn() };
 const user = {
 	id: 1,
@@ -21,7 +25,13 @@ const user = {
 describe("user registration endpoints", () => {
 	it("registers a user and does not return the password hash", async () => {
 		const register = vi.fn().mockResolvedValue(user);
-		const app = createApp({ register }, noProducts, noLogin, noCart);
+		const app = createApp(
+			{ register },
+			noProducts,
+			noLogin,
+			noCart,
+			testJwtSecret,
+		);
 
 		const response = await request(app).post("/api/register").send({
 			name: " Customer ",
@@ -46,7 +56,13 @@ describe("user registration endpoints", () => {
 
 	it("does not expose the old registration routes", async () => {
 		const register = vi.fn().mockResolvedValue(user);
-		const app = createApp({ register }, noProducts, noLogin, noCart);
+		const app = createApp(
+			{ register },
+			noProducts,
+			noLogin,
+			noCart,
+			testJwtSecret,
+		);
 
 		const responses = await Promise.all([
 			request(app).post("/api/auth/register"),
@@ -59,7 +75,13 @@ describe("user registration endpoints", () => {
 
 	it("rejects invalid registration data", async () => {
 		const register = vi.fn();
-		const app = createApp({ register }, noProducts, noLogin, noCart);
+		const app = createApp(
+			{ register },
+			noProducts,
+			noLogin,
+			noCart,
+			testJwtSecret,
+		);
 
 		const response = await request(app).post("/api/register").send({
 			name: "Customer",
@@ -72,7 +94,13 @@ describe("user registration endpoints", () => {
 	});
 
 	it("returns a client error for malformed JSON", async () => {
-		const app = createApp({ register: vi.fn() }, noProducts, noLogin, noCart);
+		const app = createApp(
+			{ register: vi.fn() },
+			noProducts,
+			noLogin,
+			noCart,
+			testJwtSecret,
+		);
 
 		const response = await request(app)
 			.post("/api/register")
@@ -87,7 +115,13 @@ describe("user registration endpoints", () => {
 		const register = vi
 			.fn()
 			.mockRejectedValue(new EmailAlreadyRegisteredError());
-		const app = createApp({ register }, noProducts, noLogin, noCart);
+		const app = createApp(
+			{ register },
+			noProducts,
+			noLogin,
+			noCart,
+			testJwtSecret,
+		);
 
 		const response = await request(app).post("/api/register").send({
 			name: user.name,

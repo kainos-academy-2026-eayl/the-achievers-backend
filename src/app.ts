@@ -4,6 +4,7 @@ import express, {
 	type Request,
 	type Response,
 } from "express";
+import { createRequireAdmin } from "./auth/requireAdmin";
 import { type CartApiService, createCartRouter } from "./cart/cartController";
 import { createProductsRouter } from "./products/productController";
 import { createUsersRouter } from "./userRegistration/userController";
@@ -25,9 +26,10 @@ function getClientErrorStatus(error: unknown): number | undefined {
 
 export function createApp(
 	userService: Pick<UserService, "register">,
-	productService: Pick<ProductService, "getAll" | "getById">,
+	productService: Pick<ProductService, "getAll" | "getById" | "delete">,
 	loginService: Pick<LoginService, "login">,
 	cartService: CartApiService,
+	jwtSecret: string,
 	frontendOrigin = "http://localhost:8000",
 ): Express {
 	const app = express();
@@ -41,7 +43,10 @@ export function createApp(
 					"Access-Control-Allow-Methods",
 					"GET, POST, PATCH, DELETE, OPTIONS",
 				);
-				res.set("Access-Control-Allow-Headers", "Content-Type, X-Cart-Id");
+				res.set(
+					"Access-Control-Allow-Headers",
+					"Content-Type, X-Cart-Id, Authorization",
+				);
 				res.sendStatus(204);
 				return;
 			}
@@ -57,7 +62,10 @@ export function createApp(
 
 	const usersRouter = createUsersRouter(userService);
 	app.use("/api/register", usersRouter);
-	app.use("/api/products", createProductsRouter(productService));
+	app.use(
+		"/api/products",
+		createProductsRouter(productService, createRequireAdmin(jwtSecret)),
+	);
 	app.use("/api/login", createLoginRouter(loginService));
 	app.use("/api/cart", createCartRouter(cartService));
 
