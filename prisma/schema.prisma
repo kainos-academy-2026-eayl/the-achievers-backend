@@ -21,7 +21,7 @@ model User {
   safeWordHint String?
   safeWordHash String?
   createdAt    DateTime @default(now())
-  user UserAddresses[]
+  addresses    UserAddresses[]
   admin        Admin?
 }
 
