@@ -1,5 +1,6 @@
 import { CartError } from "../errors/cartError";
 import type { CartItemWithProduct } from "../model/cartItemWithProduct";
+import { calculateShippingCostPence } from "../shipping";
 
 export interface CartResponseDto {
 	items: {
@@ -11,8 +12,8 @@ export interface CartResponseDto {
 
 export function toCartResponseDto(
 	items: CartItemWithProduct[],
-	estimatedShippingCostPence: number,
 ): CartResponseDto {
+	let subtotalPence = 0n;
 	const responseItems = items.map(({ product, quantity }) => {
 		if (
 			product.pricePence === null ||
@@ -24,6 +25,7 @@ export function toCartResponseDto(
 				409,
 			);
 		}
+		subtotalPence += BigInt(product.pricePence) * BigInt(quantity);
 		return {
 			product: {
 				id: product.id,
@@ -36,6 +38,7 @@ export function toCartResponseDto(
 
 	return {
 		items: responseItems,
-		estimatedShippingCost: estimatedShippingCostPence / 100,
+		estimatedShippingCost:
+			calculateShippingCostPence(subtotalPence, items.length === 0) / 100,
 	};
 }

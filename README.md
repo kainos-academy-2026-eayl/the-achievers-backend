@@ -150,13 +150,13 @@ user authentication; keep it private and use HTTPS outside local development.
 
 | Method | Endpoint | JSON body | Behaviour |
 | --- | --- | --- | --- |
-| GET | `/api/cart?country=GB&postcode=...` | None | Retrieve the cart |
-| POST | `/api/cart/items?country=GB&postcode=...` | `{"productId":"cue-1","quantity":1}` | Add units, incrementing an existing item |
-| PATCH | `/api/cart/items/:productId?country=GB&postcode=...` | `{"quantity":3}` | Set an existing item's quantity |
-| DELETE | `/api/cart/items/:productId?country=GB&postcode=...` | None | Remove an item (safe to repeat) |
+| GET | `/api/cart` | None | Retrieve the cart |
+| POST | `/api/cart/items` | `{"productId":"cue-1","quantity":1}` | Add units, incrementing an existing item |
+| PATCH | `/api/cart/items/:productId` | `{"quantity":3}` | Set an existing item's quantity |
+| DELETE | `/api/cart/items/:productId` | None | Remove an item (safe to repeat) |
 
-All four endpoints require a UK destination (`country=GB` and a postcode) and
-return HTTP `200` with the current cart:
+All four endpoints return HTTP `200` with the current cart. No `country` or
+`postcode` query parameters are required or validated:
 
 ```json
 {
@@ -170,26 +170,28 @@ return HTTP `200` with the current cart:
       "quantity": 2
     }
   ],
-  "estimatedShippingCost": 4.4
+  "estimatedShippingCost": 0
 }
 ```
 
 Product IDs must match products in the database; `cue-1` above is illustrative.
 Names and current prices always come from the backend product database, never
-the browser. Prices are stored as integer pence and returned as pounds. The
-frontend calculates each subtotal (`price * quantity`) and the combined total
-including `estimatedShippingCost`.
+the browser. Prices are stored as integer pence and returned as numeric GBP
+pounds with at most two decimal places. `estimatedShippingCost` is also returned
+as numeric GBP pounds with at most two decimal places. The backend calculates
+shipping from the cart's item prices and quantities.
 
-The estimate is a deliberately approximate, UK-only Royal Mail 2nd Class
-Small Parcel rate: £4.40 when the cart subtotal is below £50, and £0.00 when
-the subtotal is £50 or more. An empty cart returns £0.00. The £4.40 reference
-rate is the current online Royal Mail price for parcels up to 2 kg and
-45 × 35 × 16 cm ([Royal Mail UK services](https://www.royalmail.com/sending/uk));
-this mock calculation does not model parcel size or weight.
-Amazon has no single non-Prime delivery rate for arbitrary products, so no
-Amazon rate is included. The frontend collects the full delivery address but
-sends only the UK country code and postcode to the API; the backend does not
-store the street address.
+Standard shipping is £4.99 (499 pence), free only when the subtotal is strictly
+greater than £50.00 (5000 pence). Exactly £50.00 still pays £4.99; an empty cart
+has no shipping cost. Calculate totals in integer pence, converting each unit
+price to pence before multiplying by quantity.
+The shared backend rule is
+[`calculateShippingCostPence`](./src/shipping.ts), which takes a `bigint` subtotal
+in pence and an `isEmpty` flag (a non-empty cart with only zero-priced items
+still pays shipping). There are currently no checkout or order-total paths;
+future backend order totals must use this function to match the cart page.
+No shipping zones, rates tables, or destination fields exist in the database,
+so this shipping change requires no migration.
 
 A new or empty cart returns HTTP `200` with
 `{"items":[],"estimatedShippingCost":0}`; the frontend uses this to display
@@ -197,8 +199,7 @@ its empty-cart message.
 
 Quantities must be integers from `1` to `2147483647`, including the resulting
 quantity after adding units. Use DELETE, not quantity zero, to remove a product.
-Missing/invalid cart UUIDs or UK destinations, invalid quantities and malformed
-bodies return `400`. Destinations outside the UK are not supported.
+Missing/invalid cart UUIDs, invalid quantities and malformed bodies return `400`.
 Unknown products and PATCH requests for items not in that cart return `404`.
 Products without a valid price cannot be added or updated (`409`); GET also
 returns `409` if an existing item no longer has a valid price, but it can still
@@ -222,7 +223,7 @@ starting the updated API. No seed changes are required.
 Example request:
 
 ```sh
-curl 'http://localhost:3000/api/cart?country=GB&postcode=SW1A%201AA' \
+curl 'http://localhost:3000/api/cart' \
   -H 'X-Cart-Id: 8d0822af-42b7-4358-8dcd-88eabb610a30'
 ```
 

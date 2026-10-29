@@ -7,7 +7,6 @@ import {
 import {
 	parseAddCartItemDto,
 	parseCartId,
-	parseCartShippingDestination,
 	parseUpdateCartItemDto,
 } from "../dtos/cartDto";
 import { CartError } from "../errors/cartError";
@@ -23,7 +22,6 @@ export function createCartRouter(cartService: CartApiService): Router {
 
 	router.use((req, _res, next) => {
 		parseCartId(req.get("X-Cart-Id"));
-		parseCartShippingDestination(req.query.country, req.query.postcode);
 		next();
 	});
 

@@ -2,24 +2,6 @@ import { CartError } from "../errors/cartError";
 
 export const MAX_CART_QUANTITY = 2_147_483_647;
 
-export function parseCartShippingDestination(
-	country: unknown,
-	postcode: unknown,
-): void {
-	if (
-		typeof country !== "string" ||
-		typeof postcode !== "string" ||
-		postcode.trim().length === 0 ||
-		postcode.trim().length > 10 ||
-		!/^[a-z0-9 ]+$/i.test(postcode.trim())
-	) {
-		throw new CartError("A UK shipping country and postcode are required", 400);
-	}
-	if (country.trim().toUpperCase() !== "GB") {
-		throw new CartError("Shipping is only available to UK destinations", 400);
-	}
-}
-
 export function parseCartId(value: string | undefined): string {
 	if (
 		value === undefined ||

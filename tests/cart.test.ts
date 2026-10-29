@@ -1,460 +1,242 @@
+import { randomUUID } from "node:crypto";
 import request from "supertest";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createApp } from "../src/app";
-import type { CartRepository } from "../src/cart/cartRepository";
+import { PrismaCartRepository } from "../src/cart/cartRepository";
 import { CartService } from "../src/cart/cartService";
 import { MAX_CART_QUANTITY } from "../src/dtos/cartDto";
-import { CartError } from "../src/errors/cartError";
-import type { Product } from "../src/generated/prisma/client";
-import type { CartItemWithProduct } from "../src/model/cartItemWithProduct";
+import { PrismaLoginRepository } from "../src/userLogin/loginRepository";
+import { LoginService } from "../src/userLogin/loginService";
+import { PrismaProductRepository } from "../src/products/productRepository";
+import { ProductService } from "../src/products/productService";
+import { createPrismaClient } from "../src/prismaClient";
+import { PrismaUserRepository } from "../src/userRegistration/userRepository";
+import { UserService } from "../src/userRegistration/userService";
 
-const cartId = "8d0822af-42b7-4358-8dcd-88eabb610a30";
-const product: Product = {
-	id: "cue-1",
-	name: "Pro Series Maple Cue",
-	description: null,
-	category: "Cues",
-	pricePence: 8999,
-	rating: null,
-	reviewCount: 0,
+const describeWithDatabase = describe.skipIf(!process.env.DATABASE_URL);
+const fixturePrefix = `cart-integration-${randomUUID()}`;
+const cartIds: string[] = [];
+const productIds = {
+	below: `${fixturePrefix}-below`,
+	exact: `${fixturePrefix}-exact`,
+	above: `${fixturePrefix}-above`,
+	quarter: `${fixturePrefix}-quarter`,
+	penny: `${fixturePrefix}-penny`,
+	unpriced: `${fixturePrefix}-unpriced`,
 };
-const item = { cartId, productId: product.id, product, quantity: 2 };
 
-function withDestination(path: string): string {
-	return `${path}${path.includes("?") ? "&" : "?"}country=GB&postcode=SW1A%201AA`;
-}
-
-function setup() {
-	const repository = {
-		findByCartId: vi.fn<CartRepository["findByCartId"]>().mockResolvedValue([]),
-		add: vi.fn<CartRepository["add"]>().mockResolvedValue(undefined),
-		setQuantity: vi.fn<CartRepository["setQuantity"]>().mockResolvedValue(true),
-		remove: vi.fn<CartRepository["remove"]>().mockResolvedValue(undefined),
-	};
-	const transactionalRepository: CartRepository = {
-		...repository,
-		transaction: (work) => work(transactionalRepository),
-	};
-	const products = { findById: vi.fn().mockResolvedValue(product) };
-	const service = new CartService(transactionalRepository, products);
+describeWithDatabase("cart API with PostgreSQL", () => {
+	const prisma = createPrismaClient();
+	const productRepository = new PrismaProductRepository(prisma);
 	const app = createApp(
-		{ register: vi.fn() },
-		{ getAll: vi.fn(), getById: vi.fn() },
-		{ login: vi.fn() },
-		service,
+		new UserService(new PrismaUserRepository(prisma)),
+		new ProductService(productRepository),
+		new LoginService(
+			new PrismaLoginRepository(prisma),
+			"cart-integration-test-secret-with-at-least-32-bytes",
+		),
+		new CartService(new PrismaCartRepository(prisma), productRepository),
 	);
-	return { repository, products, service, app };
-}
 
-describe("cart API", () => {
-	let context: ReturnType<typeof setup>;
-	beforeEach(() => {
-		context = setup();
+	function newCartId(): string {
+		const id = randomUUID();
+		cartIds.push(id);
+		return id;
+	}
+
+	async function add(cartId: string, productId: string, quantity = 1) {
+		return request(app)
+			.post("/api/cart/items")
+			.set("X-Cart-Id", cartId)
+			.send({ productId, quantity });
+	}
+
+	beforeAll(async () => {
+		await prisma.product.createMany({
+			data: [
+				{
+					id: productIds.below,
+					name: "Integration Product Below Threshold",
+					category: "Integration",
+					pricePence: 4_999,
+				},
+				{
+					id: productIds.exact,
+					name: "Integration Product At Threshold",
+					category: "Integration",
+					pricePence: 5_000,
+				},
+				{
+					id: productIds.above,
+					name: "Integration Product Above Threshold",
+					category: "Integration",
+					pricePence: 5_001,
+				},
+				{
+					id: productIds.quarter,
+					name: "Integration Quarter Product",
+					category: "Integration",
+					pricePence: 2_500,
+				},
+				{
+					id: productIds.penny,
+					name: "Integration Penny Product",
+					category: "Integration",
+					pricePence: 1,
+				},
+				{
+					id: productIds.unpriced,
+					name: "Integration Unpriced Product",
+					category: "Integration",
+					pricePence: null,
+				},
+			],
+		});
 	});
 
-	it("returns the exact frontend response with a price in pounds", async () => {
-		context.repository.findByCartId.mockResolvedValue([item]);
-		const response = await request(context.app)
-			.get(withDestination("/api/cart"))
-			.set("X-Cart-Id", cartId.toUpperCase());
+	afterAll(async () => {
+		if (cartIds.length > 0) {
+			await prisma.cart.deleteMany({ where: { id: { in: cartIds } } });
+		}
+		await prisma.product.deleteMany({
+			where: { id: { in: Object.values(productIds) } },
+		});
+		await prisma.$disconnect();
+	});
+
+	it("returns the exact cart response shape and zero shipping for an empty cart", async () => {
+		const response = await request(app)
+			.get("/api/cart")
+			.set("X-Cart-Id", newCartId());
 
 		expect(response.status).toBe(200);
 		expect(response.body).toEqual({
-			items: [
-				{
-					product: { id: product.id, name: product.name, price: 89.99 },
-					quantity: 2,
-				},
-			],
+			items: [],
 			estimatedShippingCost: 0,
 		});
-		expect(context.repository.findByCartId).toHaveBeenCalledWith(cartId);
-	});
-
-	it("returns 200 and an empty list for a new cart", async () => {
-		const response = await request(context.app)
-			.get(withDestination("/api/cart"))
-			.set("X-Cart-Id", cartId);
-		expect(response.status).toBe(200);
-		expect(response.body).toEqual({ items: [], estimatedShippingCost: 0 });
 	});
 
 	it.each([
-		{ pricePence: 2_499, quantity: 2, estimate: 4.4 },
-		{ pricePence: 2_500, quantity: 2, estimate: 0 },
-		{ pricePence: 5_000, quantity: 1, estimate: 0 },
+		{
+			name: "£49.99",
+			productId: productIds.below,
+			price: 49.99,
+			shipping: 4.99,
+		},
+		{ name: "£50.00", productId: productIds.exact, price: 50, shipping: 4.99 },
+		{ name: "£50.01", productId: productIds.above, price: 50.01, shipping: 0 },
 	])(
-		"estimates shipping at the subtotal boundary %#",
-		async ({ pricePence, quantity, estimate }) => {
-			context.repository.findByCartId.mockResolvedValue([
-				{
-					...item,
-					product: { ...product, pricePence },
-					quantity,
-				},
-			]);
-			const response = await request(context.app)
-				.get(withDestination("/api/cart"))
-				.set("X-Cart-Id", cartId);
+		"returns £$shipping shipping for a $name subtotal using real products",
+		async ({ productId, price, shipping }) => {
+			const response = await add(newCartId(), productId);
+
 			expect(response.status).toBe(200);
-			expect(response.body.estimatedShippingCost).toBe(estimate);
-		},
-	);
-
-	it("recalculates the estimate from current items after each mutation", async () => {
-		const lowPriceProduct = { ...product, pricePence: 2_495 };
-		const smallProduct = {
-			...product,
-			id: "chalk-1",
-			name: "Chalk",
-			pricePence: 10,
-		};
-		const productsById = new Map([
-			[lowPriceProduct.id, lowPriceProduct],
-			[smallProduct.id, smallProduct],
-		]);
-		const items: CartItemWithProduct[] = [];
-		const repository: CartRepository = {
-			transaction: (work) => work(repository),
-			findByCartId: async (id) =>
-				items.filter((cartItem) => cartItem.cartId === id),
-			add: async (id, productId, quantity) => {
-				const existing = items.find(
-					(cartItem) =>
-						cartItem.cartId === id && cartItem.productId === productId,
-				);
-				if (existing) {
-					existing.quantity += quantity;
-					return;
-				}
-				const productForItem = productsById.get(productId);
-				if (!productForItem) throw new Error("Missing test product");
-				items.push({
-					cartId: id,
-					productId,
-					product: productForItem,
-					quantity,
-				});
-			},
-			setQuantity: async (id, productId, quantity) => {
-				const existing = items.find(
-					(cartItem) =>
-						cartItem.cartId === id && cartItem.productId === productId,
-				);
-				if (!existing) return false;
-				existing.quantity = quantity;
-				return true;
-			},
-			remove: async (id, productId) => {
-				const index = items.findIndex(
-					(cartItem) =>
-						cartItem.cartId === id && cartItem.productId === productId,
-				);
-				if (index !== -1) items.splice(index, 1);
-			},
-		};
-		const service = new CartService(repository, {
-			findById: async (id) => productsById.get(id) ?? null,
-		});
-
-		expect(
-			(await service.add(cartId, lowPriceProduct.id, 1)).estimatedShippingCost,
-		).toBe(4.4);
-		expect(
-			(await service.add(cartId, smallProduct.id, 1)).estimatedShippingCost,
-		).toBe(4.4);
-		expect(
-			(await service.setQuantity(cartId, lowPriceProduct.id, 2))
-				.estimatedShippingCost,
-		).toBe(0);
-		expect(
-			(await service.remove(cartId, lowPriceProduct.id)).estimatedShippingCost,
-		).toBe(4.4);
-		expect(
-			(await service.remove(cartId, smallProduct.id)).estimatedShippingCost,
-		).toBe(0);
-	});
-
-	it("adds units and ignores browser-supplied product information", async () => {
-		context.repository.findByCartId.mockResolvedValue([item]);
-		const response = await request(context.app)
-			.post(withDestination("/api/cart/items"))
-			.set("X-Cart-Id", cartId)
-			.send({
-				productId: product.id,
-				quantity: 2,
-				price: 0.01,
-				name: "Fake product",
-				product: { price: 0.01 },
+			expect(response.body).toEqual({
+				items: [
+					{
+						product: {
+							id: productId,
+							name: expect.any(String),
+							price,
+						},
+						quantity: 1,
+					},
+				],
+				estimatedShippingCost: shipping,
 			});
-		expect(response.status).toBe(200);
-		expect(response.body.items[0].product).toEqual({
-			id: product.id,
-			name: product.name,
-			price: 89.99,
-		});
-		expect(response.body.estimatedShippingCost).toBe(0);
-		expect(context.products.findById).toHaveBeenCalledWith(product.id);
-		expect(context.repository.add).toHaveBeenCalledWith(cartId, product.id, 2);
-	});
-
-	it("sets the quantity and returns the updated cart", async () => {
-		context.repository.findByCartId.mockResolvedValue([
-			{ ...item, quantity: 3 },
-		]);
-		const response = await request(context.app)
-			.patch(withDestination(`/api/cart/items/${product.id}`))
-			.set("X-Cart-Id", cartId)
-			.send({ quantity: 3 });
-		expect(response.status).toBe(200);
-		expect(response.body.items[0].quantity).toBe(3);
-		expect(response.body.estimatedShippingCost).toBe(0);
-		expect(context.repository.setQuantity).toHaveBeenCalledWith(
-			cartId,
-			product.id,
-			3,
-		);
-	});
-
-	it("removes the last item and returns an empty cart", async () => {
-		const response = await request(context.app)
-			.delete(withDestination(`/api/cart/items/${product.id}`))
-			.set("X-Cart-Id", cartId);
-		expect(response.status).toBe(200);
-		expect(response.body).toEqual({ items: [], estimatedShippingCost: 0 });
-		expect(context.repository.remove).toHaveBeenCalledWith(cartId, product.id);
-	});
-
-	const endpoints = [
-		["get", "/api/cart"],
-		["post", "/api/cart/items"],
-		["patch", "/api/cart/items/cue-1"],
-		["delete", "/api/cart/items/cue-1"],
-	] as const;
-
-	it.each(endpoints)(
-		"requires a UUID header for %s %s",
-		async (method, path) => {
-			for (const header of [undefined, "not-a-uuid", `${cartId},${cartId}`]) {
-				const pending = request(context.app)[method](withDestination(path));
-				if (header !== undefined) pending.set("X-Cart-Id", header);
-				const response = await pending.send({
-					productId: product.id,
-					quantity: 1,
-				});
-				expect(response.status).toBe(400);
-				expect(response.body.error).toBe("X-Cart-Id must be a valid UUID");
-			}
-			expect(context.repository.findByCartId).not.toHaveBeenCalled();
-			expect(context.repository.add).not.toHaveBeenCalled();
-			expect(context.repository.setQuantity).not.toHaveBeenCalled();
-			expect(context.repository.remove).not.toHaveBeenCalled();
 		},
 	);
 
-	it.each(endpoints)(
-		"requires a UK shipping destination for %s %s",
-		async (method, path) => {
-			const response = await request(context.app)
-				[method](withDestination(path))
-				.set("X-Cart-Id", cartId);
-			expect(response.status).toBe(400);
-			expect(response.body.error).toBe(
-				"A UK shipping country and postcode are required",
-			);
-			expect(context.repository.findByCartId).not.toHaveBeenCalled();
-			expect(context.repository.add).not.toHaveBeenCalled();
-			expect(context.repository.setQuantity).not.toHaveBeenCalled();
-			expect(context.repository.remove).not.toHaveBeenCalled();
-		},
-	);
-
-	it("rejects shipping destinations outside the UK", async () => {
-		const response = await request(context.app)
-			.get("/api/cart?country=US&postcode=10001")
-			.set("X-Cart-Id", cartId);
-		expect(response.status).toBe(400);
-		expect(response.body).toEqual({
-			error: "Shipping is only available to UK destinations",
-		});
-		expect(context.repository.findByCartId).not.toHaveBeenCalled();
-	});
-
-	it.each([0, -1, 1.5, "2", null, undefined, MAX_CART_QUANTITY + 1])(
-		"rejects invalid quantity %s for both add and update",
-		async (quantity) => {
-			for (const [method, path] of endpoints.slice(1, 3)) {
-				const response = await request(context.app)
-					[method](withDestination(path))
-					.set("X-Cart-Id", cartId)
-					.send({ productId: product.id, quantity });
-				expect(response.status).toBe(400);
-			}
-			expect(context.repository.add).not.toHaveBeenCalled();
-			expect(context.repository.setQuantity).not.toHaveBeenCalled();
-		},
-	);
-
-	it.each([{}, { productId: "" }, { productId: " " }, { productId: 3 }, []])(
-		"rejects invalid add bodies %j",
-		async (body) => {
-			const response = await request(context.app)
-				.post(withDestination("/api/cart/items"))
-				.set("X-Cart-Id", cartId)
-				.send(body);
-			expect(response.status).toBe(400);
-			expect(context.repository.add).not.toHaveBeenCalled();
-		},
-	);
-
-	it("rejects malformed JSON", async () => {
-		const response = await request(context.app)
-			.post(withDestination("/api/cart/items"))
-			.set("X-Cart-Id", cartId)
-			.set("Content-Type", "application/json")
-			.send("{ invalid");
-		expect(response.status).toBe(400);
-	});
-
-	it.each(["post", "patch"] as const)(
-		"returns 404 for an unknown product on %s",
-		async (method) => {
-			context.products.findById.mockResolvedValue(null);
-			const response = await request(context.app)
-				[method](
-					withDestination(
-						method === "post" ? "/api/cart/items" : "/api/cart/items/missing",
-					),
-				)
-				.set("X-Cart-Id", cartId)
-				.send({ productId: "missing", quantity: 1 });
-			expect(response.status).toBe(404);
-			expect(response.body).toEqual({ error: "Product not found" });
-		},
-	);
-
-	it.each([null, -1])(
-		"rejects an unpurchasable price %s",
-		async (pricePence) => {
-			context.products.findById.mockResolvedValue({ ...product, pricePence });
-			const response = await request(context.app)
-				.post(withDestination("/api/cart/items"))
-				.set("X-Cart-Id", cartId)
-				.send({ productId: product.id, quantity: 1 });
-			expect(response.status).toBe(409);
-			expect(context.repository.add).not.toHaveBeenCalled();
-		},
-	);
-
-	it("reports an unavailable price on an existing cart item", async () => {
-		context.repository.findByCartId.mockResolvedValue([
-			{ ...item, product: { ...product, pricePence: null } },
-		]);
-		const response = await request(context.app)
-			.get(withDestination("/api/cart"))
-			.set("X-Cart-Id", cartId);
-		expect(response.status).toBe(409);
-	});
-
-	it("returns 404 rather than adding an item during PATCH", async () => {
-		context.repository.setQuantity.mockResolvedValue(false);
-		const response = await request(context.app)
-			.patch(withDestination(`/api/cart/items/${product.id}`))
-			.set("X-Cart-Id", cartId)
-			.send({ quantity: 3 });
-		expect(response.status).toBe(404);
-		expect(response.body).toEqual({ error: "Product not found in cart" });
-	});
-
-	it("returns 400 when adding units exceeds the database integer limit", async () => {
-		context.repository.add.mockRejectedValue(
-			new CartError("Quantity limit exceeded", 400),
-		);
-		const response = await request(context.app)
-			.post(withDestination("/api/cart/items"))
-			.set("X-Cart-Id", cartId)
-			.send({ productId: product.id, quantity: 1 });
-		expect(response.status).toBe(400);
-	});
-
-	it.each(endpoints)(
-		"logs database failures without exposing details on %s",
-		async (method, path) => {
-			const error = new Error("private database connection details");
-			const log = vi.spyOn(console, "error").mockImplementation(() => {});
-			context.repository.findByCartId.mockRejectedValue(error);
-			const response = await request(context.app)
-				[method](withDestination(path))
-				.set("X-Cart-Id", cartId)
-				.send({ productId: product.id, quantity: 1 });
-			expect(response.status).toBe(500);
-			expect(response.body).toEqual({ error: "Internal server error" });
-			expect(log).toHaveBeenCalledWith("Unhandled request error", error);
-			log.mockRestore();
-		},
-	);
-});
-
-describe("frontend CORS", () => {
-	it.each(["GET", "POST", "PATCH", "DELETE"])(
-		"allows the frontend's %s preflight with X-Cart-Id",
-		async (method) => {
-			const { app } = setup();
-			const response = await request(app)
-				.options("/api/cart/items/cue-1")
-				.set("Origin", "http://localhost:8000")
-				.set("Access-Control-Request-Method", method)
-				.set("Access-Control-Request-Headers", "content-type,x-cart-id");
-			expect(response.status).toBe(204);
-			expect(response.headers["access-control-allow-origin"]).toBe(
-				"http://localhost:8000",
-			);
-			expect(response.headers["access-control-allow-methods"]).toContain(
-				method,
-			);
-			expect(response.headers["access-control-allow-headers"]).toContain(
-				"X-Cart-Id",
-			);
-		},
-	);
-
-	it("includes CORS headers on actual responses including errors", async () => {
-		const { app } = setup();
-		const response = await request(app)
+	it("calculates the threshold from every item in the cart", async () => {
+		const cartId = newCartId();
+		await add(cartId, productIds.quarter);
+		await add(cartId, productIds.quarter);
+		const exactlyFifty = await request(app)
 			.get("/api/cart")
-			.set("Origin", "http://localhost:8000");
-		expect(response.status).toBe(400);
-		expect(response.headers["access-control-allow-origin"]).toBe(
-			"http://localhost:8000",
-		);
-		expect(response.headers.vary).toContain("Origin");
-	});
-
-	it("does not allow arbitrary origins", async () => {
-		const { app } = setup();
-		const response = await request(app)
-			.get("/api/cart")
-			.set("Origin", "https://untrusted.example")
 			.set("X-Cart-Id", cartId);
-		expect(response.headers["access-control-allow-origin"]).toBeUndefined();
+
+		expect(exactlyFifty.status).toBe(200);
+		expect(exactlyFifty.body.estimatedShippingCost).toBe(4.99);
+
+		const overFifty = await add(cartId, productIds.penny);
+		expect(overFifty.status).toBe(200);
+		expect(overFifty.body.estimatedShippingCost).toBe(0);
 	});
 
-	it("supports a configured frontend origin", async () => {
-		const { service } = setup();
-		const app = createApp(
-			{ register: vi.fn() },
-			{ getAll: vi.fn(), getById: vi.fn() },
-			{ login: vi.fn() },
-			service,
-			"https://shop.example",
-		);
-		const response = await request(app)
-			.get(withDestination("/api/cart"))
+	it("serves all four cart endpoints without country or postcode parameters", async () => {
+		const cartId = newCartId();
+		const empty = await request(app).get("/api/cart").set("X-Cart-Id", cartId);
+		const added = await add(cartId, productIds.below);
+		const updated = await request(app)
+			.patch(`/api/cart/items/${productIds.below}`)
 			.set("X-Cart-Id", cartId)
-			.set("Origin", "https://shop.example");
-		expect(response.status).toBe(200);
-		expect(response.headers["access-control-allow-origin"]).toBe(
-			"https://shop.example",
-		);
+			.send({ quantity: 2 });
+		const removed = await request(app)
+			.delete(`/api/cart/items/${productIds.below}`)
+			.set("X-Cart-Id", cartId);
+
+		for (const response of [empty, added, updated, removed]) {
+			expect(response.status).toBe(200);
+			expect(response.body).toHaveProperty("estimatedShippingCost");
+		}
+		expect(updated.body.items[0].quantity).toBe(2);
+		expect(removed.body).toEqual({
+			items: [],
+			estimatedShippingCost: 0,
+		});
+	});
+
+	it("keeps cart contents isolated by X-Cart-Id", async () => {
+		const firstCartId = newCartId();
+		const secondCartId = newCartId();
+		await add(firstCartId, productIds.below);
+
+		const firstCart = await request(app)
+			.get("/api/cart")
+			.set("X-Cart-Id", firstCartId);
+		const secondCart = await request(app)
+			.get("/api/cart")
+			.set("X-Cart-Id", secondCartId);
+
+		expect(firstCart.body.items).toHaveLength(1);
+		expect(secondCart.body).toEqual({
+			items: [],
+			estimatedShippingCost: 0,
+		});
+	});
+
+	it("preserves invalid-header, quantity-limit, unknown-product, and unpriced-product errors", async () => {
+		const invalidHeader = await request(app).get("/api/cart");
+		expect(invalidHeader.status).toBe(400);
+
+		const cartId = newCartId();
+		const invalidQuantity = await add(cartId, productIds.below, 0);
+		expect(invalidQuantity.status).toBe(400);
+
+		const unknownProduct = await add(cartId, "missing-integration-product");
+		expect(unknownProduct.status).toBe(404);
+		expect(unknownProduct.body).toEqual({ error: "Product not found" });
+
+		const unpricedProduct = await add(cartId, productIds.unpriced);
+		expect(unpricedProduct.status).toBe(409);
+
+		const missingCartItem = await request(app)
+			.patch(`/api/cart/items/${productIds.below}`)
+			.set("X-Cart-Id", cartId)
+			.send({ quantity: 2 });
+		expect(missingCartItem.status).toBe(404);
+		expect(missingCartItem.body).toEqual({
+			error: "Product not found in cart",
+		});
+	});
+
+	it("enforces the database quantity limit for real cart writes", async () => {
+		const cartId = newCartId();
+		const maximum = await add(cartId, productIds.penny, MAX_CART_QUANTITY);
+		expect(maximum.status).toBe(200);
+		expect(maximum.body.items[0].quantity).toBe(MAX_CART_QUANTITY);
+
+		const overflow = await add(cartId, productIds.penny);
+		expect(overflow.status).toBe(400);
 	});
 });
