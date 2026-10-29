@@ -1,4 +1,4 @@
-import type { User } from "../generated/prisma/client";
+import type { User, UserAddresses } from "../generated/prisma/client";
 import type { ProfileUser } from "../profile/profileRepository";
 
 export interface UserResponseDto {
@@ -15,23 +15,38 @@ export function toUserResponseDto(user: User): UserResponseDto {
 	};
 }
 
-export interface ProfileResponseDto extends UserResponseDto {
-	phone: string | null;
+export interface AddressResponseDto {
+	label: string | null;
 	addressLine1: string | null;
 	addressLine2: string | null;
 	city: string | null;
 	postcode: string | null;
 }
 
-export function toProfileResponseDto(user: ProfileUser): ProfileResponseDto {
-	const address = user.user[0];
+export interface ProfileResponseDto extends UserResponseDto {
+	phone: string | null;
+	homeAddress: AddressResponseDto | null;
+	otherAddresses: AddressResponseDto[];
+}
 
+function toAddressResponseDto(address: UserAddresses): AddressResponseDto {
+	return {
+		label: address.label,
+		addressLine1: address.addressLine1,
+		addressLine2: address.addressLine2,
+		city: address.city,
+		postcode: address.postcode,
+	};
+}
+
+export function toProfileResponseDto(user: ProfileUser): ProfileResponseDto {
+	const home = user.addresses.find((address) => address.addressType === "home");
 	return {
 		...toUserResponseDto(user),
 		phone: user.phone,
-		addressLine1: address?.addressLine1 ?? null,
-		addressLine2: address?.addressLine2 ?? null,
-		city: address?.city ?? null,
-		postcode: address?.postcode ?? null,
+		homeAddress: home ? toAddressResponseDto(home) : null,
+		otherAddresses: user.addresses
+			.filter((address) => address.addressType !== "home")
+			.map(toAddressResponseDto),
 	};
 }
