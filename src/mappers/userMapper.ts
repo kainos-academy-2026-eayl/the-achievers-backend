@@ -20,9 +20,9 @@ export interface ProfileResponseDto extends UserResponseDto {
 
 export function toProfileResponseDto(user: User): ProfileResponseDto {
 	return {
-	...toUserResponseDto(user),
-	phone: user.phone,
-	email: user.email,
-	name: user.name,
-};
+		...toUserResponseDto(user),
+		phone: user.phone,
+		email: user.email,
+		name: user.name,
+	};
 }
