@@ -40,6 +40,20 @@ function createLoginApp(findByEmail = vi.fn().mockResolvedValue(user)) {
 }
 
 describe("POST /api/login", () => {
+	it("issues an admin role claim for admin users", async () => {
+		const findByEmail = vi
+			.fn()
+			.mockResolvedValue({ ...user, admin: { id: 1, userId: user.id } });
+		const response = await request(createLoginApp(findByEmail))
+			.post("/api/login")
+			.send({ email: user.email, password });
+		const { payload } = await jwtVerify(
+			response.body.accessToken,
+			new TextEncoder().encode(jwtSecret),
+		);
+		expect(payload.role).toBe("admin");
+	});
+
 	it("normalizes email and returns a verifiable, expiring JWT and safe user details", async () => {
 		const findByEmail = vi.fn().mockResolvedValue(user);
 		const response = await request(createLoginApp(findByEmail))
@@ -72,6 +86,7 @@ describe("POST /api/login", () => {
 		expect(protectedHeader).toEqual({ alg: "HS256", typ: "JWT" });
 		expect(payload).toEqual({
 			sub: String(user.id),
+			role: "user",
 			iss: "the-achievers-backend",
 			aud: "the-achievers-api",
 			iat: expect.any(Number),
@@ -238,6 +253,9 @@ describe("PrismaLoginRepository", () => {
 			.mockResolvedValue(user);
 		const repository = new PrismaLoginRepository(prisma);
 		await expect(repository.findByEmail(user.email)).resolves.toEqual(user);
-		expect(findUnique).toHaveBeenCalledWith({ where: { email: user.email } });
+		expect(findUnique).toHaveBeenCalledWith({
+			where: { email: user.email },
+			include: { admin: true },
+		});
 	});
 });
