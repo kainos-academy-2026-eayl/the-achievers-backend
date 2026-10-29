@@ -40,7 +40,8 @@ export class CartService {
 	}
 
 	private async getFromRepository(cartId: string, repository: CartRepository) {
-		return toCartResponseDto(await repository.findByCartId(cartId));
+		const items = await repository.findByCartId(cartId);
+		return toCartResponseDto(items);
 	}
 
 	private async requirePricedProduct(productId: string): Promise<void> {
