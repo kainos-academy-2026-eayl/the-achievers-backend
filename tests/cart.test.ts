@@ -147,11 +147,183 @@ describeWithDatabase("cart API with PostgreSQL", () => {
 		},
 	);
 
+<<<<<<< HEAD
 	it("calculates the threshold from every item in the cart", async () => {
 		const cartId = newCartId();
 		await add(cartId, productIds.quarter);
 		await add(cartId, productIds.quarter);
 		const exactlyFifty = await request(app)
+=======
+	it.each(endpoints)(
+		"requires a UK shipping destination for %s %s",
+		async (method, path) => {
+			const response = await request(context.app)
+				[method](path)
+				.set("X-Cart-Id", cartId);
+			expect(response.status).toBe(400);
+			expect(response.body.error).toBe(
+				"A UK shipping country and postcode are required",
+			);
+			expect(context.repository.findByCartId).not.toHaveBeenCalled();
+			expect(context.repository.add).not.toHaveBeenCalled();
+			expect(context.repository.setQuantity).not.toHaveBeenCalled();
+			expect(context.repository.remove).not.toHaveBeenCalled();
+		},
+	);
+
+	it("rejects shipping destinations outside the UK", async () => {
+		const response = await request(context.app)
+			.get("/api/cart?country=US&postcode=10001")
+			.set("X-Cart-Id", cartId);
+		expect(response.status).toBe(400);
+		expect(response.body).toEqual({
+			error: "Shipping is only available to UK destinations",
+		});
+		expect(context.repository.findByCartId).not.toHaveBeenCalled();
+	});
+
+	it.each([0, -1, 1.5, "2", null, undefined, MAX_CART_QUANTITY + 1])(
+		"rejects invalid quantity %s for both add and update",
+		async (quantity) => {
+			for (const [method, path] of endpoints.slice(1, 3)) {
+				const response = await request(context.app)
+					[method](withDestination(path))
+					.set("X-Cart-Id", cartId)
+					.send({ productId: product.id, quantity });
+				expect(response.status).toBe(400);
+			}
+			expect(context.repository.add).not.toHaveBeenCalled();
+			expect(context.repository.setQuantity).not.toHaveBeenCalled();
+		},
+	);
+
+	it.each([{}, { productId: "" }, { productId: " " }, { productId: 3 }, []])(
+		"rejects invalid add bodies %j",
+		async (body) => {
+			const response = await request(context.app)
+				.post(withDestination("/api/cart/items"))
+				.set("X-Cart-Id", cartId)
+				.send(body);
+			expect(response.status).toBe(400);
+			expect(context.repository.add).not.toHaveBeenCalled();
+		},
+	);
+
+	it("rejects malformed JSON", async () => {
+		const response = await request(context.app)
+			.post(withDestination("/api/cart/items"))
+			.set("X-Cart-Id", cartId)
+			.set("Content-Type", "application/json")
+			.send("{ invalid");
+		expect(response.status).toBe(400);
+	});
+
+	it.each(["post", "patch"] as const)(
+		"returns 404 for an unknown product on %s",
+		async (method) => {
+			context.products.findById.mockResolvedValue(null);
+			const response = await request(context.app)
+				[method](
+					withDestination(
+						method === "post" ? "/api/cart/items" : "/api/cart/items/missing",
+					),
+				)
+				.set("X-Cart-Id", cartId)
+				.send({ productId: "missing", quantity: 1 });
+			expect(response.status).toBe(404);
+			expect(response.body).toEqual({ error: "Product not found" });
+		},
+	);
+
+	it.each([null, -1])(
+		"rejects an unpurchasable price %s",
+		async (pricePence) => {
+			context.products.findById.mockResolvedValue({ ...product, pricePence });
+			const response = await request(context.app)
+				.post(withDestination("/api/cart/items"))
+				.set("X-Cart-Id", cartId)
+				.send({ productId: product.id, quantity: 1 });
+			expect(response.status).toBe(409);
+			expect(context.repository.add).not.toHaveBeenCalled();
+		},
+	);
+
+	it("reports an unavailable price on an existing cart item", async () => {
+		context.repository.findByCartId.mockResolvedValue([
+			{ ...item, product: { ...product, pricePence: null } },
+		]);
+		const response = await request(context.app)
+			.get(withDestination("/api/cart"))
+			.set("X-Cart-Id", cartId);
+		expect(response.status).toBe(409);
+	});
+
+	it("returns 404 rather than adding an item during PATCH", async () => {
+		context.repository.setQuantity.mockResolvedValue(false);
+		const response = await request(context.app)
+			.patch(withDestination(`/api/cart/items/${product.id}`))
+			.set("X-Cart-Id", cartId)
+			.send({ quantity: 3 });
+		expect(response.status).toBe(404);
+		expect(response.body).toEqual({ error: "Product not found in cart" });
+	});
+
+	it("returns 400 when adding units exceeds the database integer limit", async () => {
+		context.repository.add.mockRejectedValue(
+			new CartError("Quantity limit exceeded", 400),
+		);
+		const response = await request(context.app)
+			.post(withDestination("/api/cart/items"))
+			.set("X-Cart-Id", cartId)
+			.send({ productId: product.id, quantity: 1 });
+		expect(response.status).toBe(400);
+	});
+
+	it.each(endpoints)(
+		"logs database failures without exposing details on %s",
+		async (method, path) => {
+			const error = new Error("private database connection details");
+			const log = vi.spyOn(console, "error").mockImplementation(() => {});
+			context.repository.findByCartId.mockRejectedValue(error);
+			const response = await request(context.app)
+				[method](withDestination(path))
+				.set("X-Cart-Id", cartId)
+				.send({ productId: product.id, quantity: 1 });
+			expect(response.status).toBe(500);
+			expect(response.body).toEqual({ error: "Internal server error" });
+			expect(log).toHaveBeenCalledWith("Unhandled request error", error);
+			log.mockRestore();
+		},
+	);
+});
+
+describe("frontend CORS", () => {
+	it.each(["GET", "POST", "PATCH", "DELETE"])(
+		"allows the frontend's %s preflight with X-Cart-Id",
+		async (method) => {
+			const { app } = setup();
+			const response = await request(app)
+				.options("/api/cart/items/cue-1")
+				.set("Origin", "http://localhost:8000")
+				.set("Access-Control-Request-Method", method)
+				.set("Access-Control-Request-Headers", "content-type,x-cart-id");
+			expect(response.status).toBe(204);
+			expect(response.headers["access-control-allow-origin"]).toBe(
+				"http://localhost:8000",
+			);
+			expect(response.headers["access-control-allow-methods"]).toContain(
+				method,
+			);
+			expect(response.headers["access-control-allow-headers"]).toContain(
+				"X-Cart-Id",
+			);
+		},
+	);
+
+	it("includes CORS headers on actual responses including errors", async () => {
+		const { app } = setup();
+		const response = await request(app)
+>>>>>>> 5f52428e715a04284673e7c24ad92faa43710f99
 			.get("/api/cart")
 			.set("X-Cart-Id", cartId);
 
