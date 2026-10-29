@@ -62,9 +62,13 @@ model CartItem {
 model UserAddresses {
   addressId    Int     @id @default(autoincrement())
   userId       Int
+  addressType  String  @default("other")
+  label        String?
   addressLine1 String?
   addressLine2 String?
   city         String?
   postcode     String?
   user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

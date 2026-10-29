@@ -1,4 +1,4 @@
-import type { UpdateProfileDto } from "../dtos/updateProfileDto";
+import type { AddressDto, UpdateProfileDto } from "../dtos/updateProfileDto";
 import { EmailAlreadyRegisteredError } from "../errors/emailAlreadyRegisteredError";
 import {
 	Prisma,
@@ -19,6 +19,8 @@ const includeAddresses = {
 	addresses: { orderBy: { addressId: "asc" } },
 } as const;
 
+type AddressSlot = { addressType: "home" | "other"; address: AddressDto };
+
 export class PrismaProfileRepository implements ProfileRepository {
 	constructor(private readonly prisma: PrismaClient) {}
 
@@ -30,23 +32,48 @@ export class PrismaProfileRepository implements ProfileRepository {
 	}
 
 	async update(id: number, data: ProfileUpdateData): Promise<ProfileUser> {
-		const { addressLine1, addressLine2, city, postcode, ...userData } = data;
-		const address = { addressLine1, addressLine2, city, postcode };
+		const { homeAddress, otherAddresses, ...userData } = data;
+		const wanted: AddressSlot[] = [
+			...(homeAddress
+				? [{ addressType: "home" as const, address: homeAddress }]
+				: []),
+			...otherAddresses.map((address) => ({
+				addressType: "other" as const,
+				address,
+			})),
+		];
+
 		try {
 			return await this.prisma.$transaction(async (tx) => {
 				await tx.user.update({ where: { id }, data: userData });
-				const existing = await tx.userAddresses.findFirst({
+
+				// Update rows in place so address IDs stay stable for future orders.
+				const existing = await tx.userAddresses.findMany({
 					where: { userId: id },
 					orderBy: { addressId: "asc" },
 				});
-				if (existing) {
-					await tx.userAddresses.update({
-						where: { addressId: existing.addressId },
-						data: address,
-					});
-				} else if (Object.values(address).some((value) => value !== null)) {
-					await tx.userAddresses.create({ data: { userId: id, ...address } });
+				const unused = [...existing];
+				for (const { addressType, address } of wanted) {
+					const index = unused.findIndex(
+						(row) => row.addressType === addressType,
+					);
+					const [row] = index >= 0 ? unused.splice(index, 1) : [];
+					const values = { addressType, ...address };
+					if (row) {
+						await tx.userAddresses.update({
+							where: { addressId: row.addressId },
+							data: values,
+						});
+					} else {
+						await tx.userAddresses.create({ data: { userId: id, ...values } });
+					}
 				}
+				if (unused.length > 0) {
+					await tx.userAddresses.deleteMany({
+						where: { addressId: { in: unused.map((row) => row.addressId) } },
+					});
+				}
+
 				return tx.user.findUniqueOrThrow({
 					where: { id },
 					include: includeAddresses,
