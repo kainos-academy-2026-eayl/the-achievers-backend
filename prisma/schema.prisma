@@ -67,4 +67,6 @@ model UserAddresses {
   city         String?
   postcode     String?
   user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, addressId])
 }
