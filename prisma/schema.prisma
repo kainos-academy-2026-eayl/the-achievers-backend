@@ -17,9 +17,11 @@ model User {
   email        String   @unique
   name         String
   passwordHash String
+  phone        String?
   safeWordHint String?
   safeWordHash String?
   createdAt    DateTime @default(now())
+  user UserAddresses[]
   admin        Admin?
 }
 
@@ -55,4 +57,14 @@ model CartItem {
 
   @@id([cartId, productId])
   @@index([productId])
+}
+
+model UserAddresses {
+  addressId    Int     @id @default(autoincrement())
+  userId       Int
+  addressLine1 String?
+  addressLine2 String?
+  city         String?
+  postcode     String?
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

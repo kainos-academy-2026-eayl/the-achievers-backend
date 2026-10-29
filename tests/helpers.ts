@@ -7,3 +7,11 @@ export const noCart: CartApiService = {
 	setQuantity: vi.fn(),
 	remove: vi.fn(),
 };
+
+export const emptyProfileFields = {
+	phone: null,
+	addressLine1: null,
+	addressLine2: null,
+	city: null,
+	postcode: null,
+};

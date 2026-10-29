@@ -9,7 +9,7 @@ import { PrismaClient, type User } from "../src/generated/prisma/client";
 import { PrismaLoginRepository } from "../src/userLogin/loginRepository";
 import { LoginService } from "../src/userLogin/loginService";
 import { UserService } from "../src/userRegistration/userService";
-import { noCart } from "./helpers";
+import { emptyProfileFields, noCart } from "./helpers";
 
 const jwtSecret = "test-only-secret-not-for-production-123456789";
 const password = "LongEnoughPassword123!";
@@ -18,6 +18,7 @@ const user: User = {
 	email: "customer@example.com",
 	name: "Customer",
 	passwordHash: "",
+	...emptyProfileFields,
 	safeWordHint: null,
 	safeWordHash: null,
 	createdAt: new Date("2026-01-01T00:00:00.000Z"),

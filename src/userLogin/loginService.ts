@@ -1,5 +1,6 @@
 import * as argon2 from "argon2";
 import { SignJWT } from "jose";
+import { TOKEN_AUDIENCE, TOKEN_ISSUER } from "../auth/requireAuth";
 import { InvalidCredentialsError } from "../errors/invalidCredentialsError";
 import { toUserResponseDto } from "../mappers/userMapper";
 import type { LoginUserDto } from "../model/loginUserDto";
@@ -39,8 +40,8 @@ export class LoginService {
 		const accessToken = await new SignJWT({ role })
 			.setProtectedHeader({ alg: "HS256", typ: "JWT" })
 			.setSubject(String(user.id))
-			.setIssuer("the-achievers-backend")
-			.setAudience("the-achievers-api")
+			.setIssuer(TOKEN_ISSUER)
+			.setAudience(TOKEN_AUDIENCE)
 			.setIssuedAt()
 			.setExpirationTime(`${tokenLifetimeSeconds}s`)
 			.sign(this.signingKey);
