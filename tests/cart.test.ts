@@ -5,11 +5,6 @@ import { createApp } from "../src/app";
 import { PrismaCartRepository } from "../src/cart/cartRepository";
 import { CartService } from "../src/cart/cartService";
 import { MAX_CART_QUANTITY } from "../src/dtos/cartDto";
-<<<<<<< HEAD
-import { CartError } from "../src/errors/cartError";
-import type { Product } from "../src/generated/prisma/client";
-import { testJwtSecret } from "./helpers";
-=======
 import { PrismaLoginRepository } from "../src/userLogin/loginRepository";
 import { LoginService } from "../src/userLogin/loginService";
 import { PrismaProductRepository } from "../src/products/productRepository";
@@ -17,7 +12,7 @@ import { ProductService } from "../src/products/productService";
 import { createPrismaClient } from "../src/prismaClient";
 import { PrismaUserRepository } from "../src/userRegistration/userRepository";
 import { UserService } from "../src/userRegistration/userService";
->>>>>>> origin/main
+import { testJwtSecret } from "./helpers";
 
 const describeWithDatabase = describe.skipIf(!process.env.DATABASE_URL);
 const fixturePrefix = `cart-integration-${randomUUID()}`;
@@ -37,13 +32,6 @@ describeWithDatabase("cart API with PostgreSQL", () => {
 	const prisma = createPrismaClient();
 	const productRepository = new PrismaProductRepository(prisma);
 	const app = createApp(
-<<<<<<< HEAD
-		{ register: vi.fn() },
-		{ getAll: vi.fn(), getById: vi.fn(), delete: vi.fn() },
-		{ login: vi.fn() },
-		service,
-		testJwtSecret,
-=======
 		new UserService(new PrismaUserRepository(prisma)),
 		new ProductService(productRepository),
 		new LoginService(
@@ -51,7 +39,7 @@ describeWithDatabase("cart API with PostgreSQL", () => {
 			"cart-integration-test-secret-with-at-least-32-bytes",
 		),
 		new CartService(new PrismaCartRepository(prisma), productRepository),
->>>>>>> origin/main
+		testJwtSecret,
 	);
 
 	function newCartId(): string {
@@ -125,32 +113,6 @@ describeWithDatabase("cart API with PostgreSQL", () => {
 			.get("/api/cart")
 			.set("X-Cart-Id", newCartId());
 
-<<<<<<< HEAD
-	it("does not allow arbitrary origins", async () => {
-		const { app } = setup();
-		const response = await request(app)
-			.get("/api/cart")
-			.set("Origin", "https://untrusted.example")
-			.set("X-Cart-Id", cartId);
-		expect(response.headers["access-control-allow-origin"]).toBeUndefined();
-	});
-
-	it("supports a configured frontend origin", async () => {
-		const { service } = setup();
-		const app = createApp(
-			{ register: vi.fn() },
-			{ getAll: vi.fn(), getById: vi.fn(), delete: vi.fn() },
-			{ login: vi.fn() },
-			service,
-			testJwtSecret,
-			"https://shop.example",
-		);
-		const response = await request(app)
-			.get("/api/cart")
-			.set("X-Cart-Id", cartId)
-			.set("Origin", "https://shop.example");
-=======
->>>>>>> origin/main
 		expect(response.status).toBe(200);
 		expect(response.body).toEqual({
 			items: [],

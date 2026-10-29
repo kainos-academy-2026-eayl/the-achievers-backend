@@ -4,11 +4,8 @@ import express, {
 	type Request,
 	type Response,
 } from "express";
-<<<<<<< HEAD
 import { createRequireAdmin } from "./auth/requireAdmin";
-=======
 import { createRequireAuth } from "./auth/requireAuth";
->>>>>>> origin/main
 import { type CartApiService, createCartRouter } from "./cart/cartController";
 import { createProductsRouter } from "./products/productController";
 import type { ProductService } from "./products/productService";

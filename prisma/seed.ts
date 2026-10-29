@@ -144,16 +144,6 @@ const products: Prisma.ProductCreateInput[] = [
 	},
 ];
 
-<<<<<<< HEAD
-type AdminSeed = { email: string; name: string; };
-
-async function loadAdminSeed(): Promise<AdminSeed> {
-    const raw = await readFile(
-        new URL("./admin.seed.json", import.meta.url),
-        "utf-8",
-    );
-    return JSON.parse(raw) as AdminSeed;
-=======
 type AdminSeed = { email: string; name: string };
 
 async function loadAdminSeed(): Promise<AdminSeed> {
@@ -162,52 +152,11 @@ async function loadAdminSeed(): Promise<AdminSeed> {
 		"utf-8",
 	);
 	return JSON.parse(raw) as AdminSeed;
->>>>>>> origin/main
 }
 
 const prisma = createPrismaClient();
 
 try {
-<<<<<<< HEAD
-    const adminSeed = await loadAdminSeed();
-    if (adminSeed) {
-        if (
-            typeof adminSeed.password !== "string" ||
-            adminSeed.password.length < 12 ||
-            adminSeed.password.length > 128
-        ) {
-            throw new Error(
-                "Admin seed password must be between 12 and 128 characters long",
-            );
-        }
-        const passwordHash = await argon2.hash(adminSeed.password, {
-            type: argon2.argon2id,
-        });
-        const email = adminSeed.email.trim().toLowerCase();
-        const user = await prisma.user.upsert({
-            where: { email },
-            update: { name: adminSeed.name, passwordHash },
-            create: { email, name: adminSeed.name, passwordHash },
-        });
-        await prisma.admin.upsert({
-            where: { userId: user.id },
-            update: {},
-            create: { userId: user.id },
-        });
-        console.log(`Seeded admin ${adminSeed.email}`);
-    } else {
-        console.log("ADMIN_PASSWORD is not set, skipping admin seed");
-    }
-
-    for (const product of products) {
-        await prisma.product.upsert({
-            where: { id: product.id },
-            update: product,
-            create: product,
-        });
-    }
-    console.log(`Seeded ${products.length} products`);
-=======
 	const adminSeed = await loadAdminSeed();
 	const adminPassword = process.env.ADMIN_PASSWORD;
 	if (adminPassword) {
@@ -243,7 +192,6 @@ try {
 		});
 	}
 	console.log(`Seeded ${products.length} products`);
->>>>>>> origin/main
 } finally {
 	await prisma.$disconnect();
 }
