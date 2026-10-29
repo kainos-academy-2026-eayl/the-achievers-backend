@@ -256,7 +256,7 @@ describe("cart API", () => {
 		"requires a UK shipping destination for %s %s",
 		async (method, path) => {
 			const response = await request(context.app)
-				[method](withDestination(path))
+				[method](path)
 				.set("X-Cart-Id", cartId);
 			expect(response.status).toBe(400);
 			expect(response.body.error).toBe(
