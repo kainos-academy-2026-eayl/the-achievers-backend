@@ -4,11 +4,13 @@ import { PrismaCartRepository } from "./cart/cartRepository";
 import { CartService } from "./cart/cartService";
 import { createPrismaClient } from "./prismaClient";
 import { PrismaProductRepository } from "./products/productRepository";
-import { PrismaUserRepository } from "./userRegistration/userRepository";
 import { ProductService } from "./products/productService";
-import { UserService } from "./userRegistration/userService";
+import { PrismaProfileRepository } from "./profile/profileRepository";
+import { ProfileService } from "./profile/profileService";
 import { PrismaLoginRepository } from "./userLogin/loginRepository";
 import { LoginService } from "./userLogin/loginService";
+import { PrismaUserRepository } from "./userRegistration/userRepository";
+import { UserService } from "./userRegistration/userService";
 
 const HOST = "0.0.0.0";
 const PORT = Number(process.env.PORT ?? "3000");
@@ -40,6 +42,10 @@ const app = createApp(
 	cartService,
 	process.env.JWT_SECRET,
 	process.env.FRONTEND_ORIGIN ?? "http://localhost:8000",
+	{
+		service: new ProfileService(new PrismaProfileRepository(prisma)),
+		jwtSecret: process.env.JWT_SECRET,
+	},
 );
 
 // Keep everything below this comment at the bottom of the file

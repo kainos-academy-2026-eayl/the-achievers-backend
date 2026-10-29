@@ -4,14 +4,20 @@ import express, {
 	type Request,
 	type Response,
 } from "express";
+<<<<<<< HEAD
 import { createRequireAdmin } from "./auth/requireAdmin";
+=======
+import { createRequireAuth } from "./auth/requireAuth";
+>>>>>>> origin/main
 import { type CartApiService, createCartRouter } from "./cart/cartController";
 import { createProductsRouter } from "./products/productController";
-import { createUsersRouter } from "./userRegistration/userController";
 import type { ProductService } from "./products/productService";
-import type { UserService } from "./userRegistration/userService";
+import { createProfileRouter } from "./profile/profileController";
+import type { ProfileService } from "./profile/profileService";
 import { createLoginRouter } from "./userLogin/loginController";
 import type { LoginService } from "./userLogin/loginService";
+import { createUsersRouter } from "./userRegistration/userController";
+import type { UserService } from "./userRegistration/userService";
 
 function getClientErrorStatus(error: unknown): number | undefined {
 	if (typeof error !== "object" || error === null || !("status" in error)) {
@@ -31,6 +37,10 @@ export function createApp(
 	cartService: CartApiService,
 	jwtSecret: string,
 	frontendOrigin = "http://localhost:8000",
+	profile?: {
+		service: Pick<ProfileService, "getProfile" | "updateProfile">;
+		jwtSecret: string;
+	},
 ): Express {
 	const app = express();
 
@@ -68,6 +78,15 @@ export function createApp(
 	);
 	app.use("/api/login", createLoginRouter(loginService));
 	app.use("/api/cart", createCartRouter(cartService));
+	if (profile) {
+		app.use(
+			"/api/me",
+			createProfileRouter(
+				profile.service,
+				createRequireAuth(profile.jwtSecret),
+			),
+		);
+	}
 
 	app.use(
 		(error: unknown, _req: Request, res: Response, _next: NextFunction) => {
