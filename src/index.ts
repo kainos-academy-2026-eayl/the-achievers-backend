@@ -40,6 +40,7 @@ const app = createApp(
 	productService,
 	loginService,
 	cartService,
+	process.env.JWT_SECRET,
 	process.env.FRONTEND_ORIGIN ?? "http://localhost:8000",
 	{
 		service: new ProfileService(new PrismaProfileRepository(prisma)),

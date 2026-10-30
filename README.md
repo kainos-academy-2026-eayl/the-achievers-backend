@@ -108,11 +108,30 @@ least 32 bytes and fails at startup if the secret is missing or too short.
 Tokens use HS256, expire after one hour, and identify the user by their internal
 ID in `sub`. The issuer is `the-achievers-backend` and audience is
 `the-achievers-api`. Keep the secret stable across restarts and private to trusted
-servers. This endpoint issues tokens only: existing routes remain public. Future
-protected routes must verify signature, algorithm, issuer, audience, and expiry
-before trusting a token. Use HTTPS and login rate limiting before public deployment.
+servers. Product deletion requires an admin token; catalogue reads, registration,
+login and anonymous cart routes remain public. Protected routes verify signature,
+algorithm, issuer, audience, and expiry before trusting a token. Use HTTPS and
+login rate limiting before public deployment.
 For an Express/Nunjucks frontend, keep the token in its server-side session rather
 than exposing it to browser scripts.
+
+## Admin product deletion
+
+`DELETE /api/products/:id` permanently deletes a product. Supply the login JWT
+in the `Authorization` header using the Bearer scheme. Only tokens with
+`role: "admin"` are accepted. Missing, invalid or expired tokens return `401`;
+authenticated non-admins receive `403`. Successful deletion returns `204` with no
+body; a missing product (including a repeated deletion) returns `404` with
+`{"error":"Product not found"}`. Unexpected failures are logged and return `500`
+without exposing database details. Public product GET routes are unchanged.
+
+Existing foreign keys cascade deletion to all cart items referencing that product.
+This is permanent, not a soft delete; no schema migration is required. Running
+the product seed again can recreate seeded products. Browser preflights from the
+configured frontend origin allow the `Authorization` header.
+
+Run `npm test -- tests/productDeletion.test.ts tests/products.test.ts tests/requireAdmin.test.ts`.
+These isolated tests require no running database.
 
 ## Local development
 
