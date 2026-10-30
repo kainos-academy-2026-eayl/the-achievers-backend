@@ -20,8 +20,8 @@ export const MAX_OTHER_ADDRESSES = 2;
 export type FieldErrors = Record<string, string>;
 
 export type UpdateProfileDtoResult =
-	| { success: true; data: UpdateProfileDto; }
-	| { success: false; message: string; fieldErrors: FieldErrors; };
+	| { success: true; data: UpdateProfileDto }
+	| { success: false; message: string; fieldErrors: FieldErrors };
 
 const ukPhone = /^(?:0(?:[1-6]\d{8,9}|7\d{9})|\+44(?:[1-6]\d{8,9}|7\d{9}))$/;
 const ukPostcode =
