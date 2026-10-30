@@ -28,6 +28,7 @@ const app = createApp(
 	new ProductService(productRepository),
 	new LoginService(new PrismaLoginRepository(prisma), jwtSecret),
 	new CartService(new PrismaCartRepository(prisma), productRepository),
+	jwtSecret,
 	undefined,
 	{
 		service: new ProfileService(new PrismaProfileRepository(prisma)),

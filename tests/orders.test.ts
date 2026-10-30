@@ -37,6 +37,7 @@ describeWithDatabase("orders API with PostgreSQL", () => {
         new ProductService(productRepository),
         noLogin,
         new CartService(new PrismaCartRepository(prisma), productRepository),
+        jwtSecret,
         undefined,
         undefined,
         {

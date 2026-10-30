@@ -1,6 +1,6 @@
 import { CartError } from "../errors/cartError";
 
-export const MAX_CART_QUANTITY = 2_147_483_647;
+export const MAX_CART_QUANTITY = 99;
 
 export function parseCartId(value: string | undefined): string {
 	if (
