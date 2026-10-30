@@ -20,7 +20,7 @@ model User {
   phone        String?
   safeWordHint String?
   safeWordHash String?
-  creditBalancePence Int @default(0)
+  creditBalancePence Int @default(10000000)
   createdAt    DateTime @default(now())
   addresses    UserAddresses[]
   admin        Admin?

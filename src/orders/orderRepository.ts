@@ -42,6 +42,7 @@ export interface OrderRepository {
     lockCart(cartId: string): Promise<void>;
     findCartItems(cartId: string): Promise<CartItemWithProduct[]>;
     deductStock(productId: string, quantity: number): Promise<boolean>;
+    deductCredit(userId: number, amountPence: number): Promise<boolean>;
     create(order: NewOrder): Promise<OrderWithItems>;
     clearCart(cartId: string): Promise<void>;
     findByUser(userId: number): Promise<OrderWithItems[]>;
@@ -83,6 +84,14 @@ export class PrismaOrderRepository implements OrderRepository {
         const result = await this.prisma.product.updateMany({
             where: { id: productId, stock: { gte: quantity } },
             data: { stock: { decrement: quantity } },
+        });
+        return result.count > 0;
+    }
+
+    async deductCredit(userId: number, amountPence: number): Promise<boolean> {
+        const result = await this.prisma.user.updateMany({
+            where: { id: userId, creditBalancePence: { gte: amountPence } },
+            data: { creditBalancePence: { decrement: amountPence } },
         });
         return result.count > 0;
     }

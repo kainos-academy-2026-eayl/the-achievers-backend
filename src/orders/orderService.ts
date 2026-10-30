@@ -50,6 +50,10 @@ export class OrderService {
                 }
             }
 
+            if (!(await repository.deductCredit(userId, Number(totalPence)))) {
+                throw new OrderError("Not enough account credit", 409);
+            }
+
             const created = await repository.create({
                 id: randomUUID(),
                 reference: generateReference(),

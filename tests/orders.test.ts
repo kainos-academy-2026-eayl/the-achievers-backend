@@ -188,6 +188,10 @@ describeWithDatabase("orders API with PostgreSQL", () => {
             createdAt: expect.any(String),
         });
         expect(await stockOf(productIds.cue)).toBe(3);
+        const buyer = await prisma.user.findUniqueOrThrow({
+            where: { id: customer.id },
+        });
+        expect(buyer.creditBalancePence).toBe(10_000_000 - 6_250);
         const cart = await request(app).get("/api/cart").set("X-Cart-Id", cartId);
         expect(cart.body.items).toEqual([]);
 
@@ -245,6 +249,28 @@ describeWithDatabase("orders API with PostgreSQL", () => {
         expect(await prisma.order.count({ where: { userId: customer.id } })).toBe(
             0,
         );
+    });
+
+    it("rejects checkout without changing anything when credit is short", async () => {
+        const customer = await createUser();
+        await prisma.user.update({
+            where: { id: customer.id },
+            data: { creditBalancePence: 100 },
+        });
+        const cartId = await cartWith({ [productIds.chalk]: 1 });
+        const chalkBefore = await stockOf(productIds.chalk);
+
+        const response = await checkout(customer.auth, cartId);
+
+        expect(response.status).toBe(409);
+        expect(response.body).toEqual({ error: "Not enough account credit" });
+        expect(await stockOf(productIds.chalk)).toBe(chalkBefore);
+        const buyer = await prisma.user.findUniqueOrThrow({
+            where: { id: customer.id },
+        });
+        expect(buyer.creditBalancePence).toBe(100);
+        const cart = await request(app).get("/api/cart").set("X-Cart-Id", cartId);
+        expect(cart.body.items).toHaveLength(1);
     });
 
     it("rejects an empty cart and a missing shipping address", async () => {
