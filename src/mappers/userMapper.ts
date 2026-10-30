@@ -25,6 +25,7 @@ export interface AddressResponseDto {
 
 export interface ProfileResponseDto extends UserResponseDto {
 	phone: string | null;
+	creditBalance: number;
 	homeAddress: AddressResponseDto | null;
 	otherAddresses: AddressResponseDto[];
 }
@@ -44,6 +45,7 @@ export function toProfileResponseDto(user: ProfileUser): ProfileResponseDto {
 	return {
 		...toUserResponseDto(user),
 		phone: user.phone,
+		creditBalance: user.creditBalancePence / 100,
 		homeAddress: home ? toAddressResponseDto(home) : null,
 		otherAddresses: user.addresses
 			.filter((address) => address.addressType !== "home")

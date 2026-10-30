@@ -10,6 +10,7 @@ export const noCart: CartApiService = {
 
 export const emptyProfileFields = {
 	phone: null,
+	creditBalancePence: 0,
 	addressLine1: null,
 	addressLine2: null,
 	city: null,
