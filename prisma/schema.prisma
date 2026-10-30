@@ -23,6 +23,7 @@ model User {
   createdAt    DateTime @default(now())
   addresses    UserAddresses[]
   admin        Admin?
+  orders       Order[]
 }
 
 model Admin {
@@ -40,7 +41,9 @@ model Product {
   pricePence  Int?
   rating      Float?
   reviewCount Int        @default(0)
+  stock       Int        @default(0)
   cartItems   CartItem[]
+  orderItems  OrderItem[]
 }
 
 model Cart {
@@ -71,4 +74,39 @@ model UserAddresses {
   user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model Order {
+  id            String      @id @db.Uuid
+  reference     String      @unique
+  userId        Int
+  status        String      @default("placed")
+  subtotalPence Int
+  shippingPence Int
+  totalPence    Int
+  // Snapshot of the address at purchase time; later profile edits must not change it
+  addressLine1  String
+  addressLine2  String?
+  city          String
+  postcode      String
+  createdAt     DateTime    @default(now())
+  user          User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  items         OrderItem[]
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id             Int      @id @default(autoincrement())
+  orderId        String   @db.Uuid
+  productId      String?
+  productName    String
+  unitPricePence Int
+  quantity       Int
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product        Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([productId])
 }
