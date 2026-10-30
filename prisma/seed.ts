@@ -201,7 +201,14 @@ try {
     for (const product of products) {
         await prisma.product.upsert({
             where: { id: product.id },
-            update: product,
+            update: {
+                name: product.name,
+                description: product.description,
+                category: product.category,
+                pricePence: product.pricePence,
+                rating: product.rating,
+                reviewCount: product.reviewCount,
+            },
             create: product,
         });
     }

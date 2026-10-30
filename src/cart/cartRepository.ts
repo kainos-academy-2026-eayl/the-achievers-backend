@@ -1,9 +1,11 @@
+import { MAX_CART_QUANTITY } from "../dtos/cartDto";
 import { CartError } from "../errors/cartError";
 import type { Prisma, PrismaClient } from "../generated/prisma/client";
 import type { CartItemWithProduct } from "../model/cartItemWithProduct";
 
 export interface CartRepository {
 	transaction<T>(work: (repository: CartRepository) => Promise<T>): Promise<T>;
+	lockCart(cartId: string): Promise<void>;
 	findByCartId(cartId: string): Promise<CartItemWithProduct[]>;
 	add(cartId: string, productId: string, quantity: number): Promise<void>;
 	setQuantity(
@@ -33,24 +35,29 @@ export class PrismaCartRepository implements CartRepository {
 		});
 	}
 
-	async add(
-		cartId: string,
-		productId: string,
-		quantity: number,
-	): Promise<void> {
+	async lockCart(cartId: string): Promise<void> {
 		await this.prisma.$executeRaw`
 			INSERT INTO "Cart" ("id")
 			VALUES (${cartId}::uuid)
 			ON CONFLICT ("id") DO NOTHING
 		`;
+		await this.prisma.$queryRaw`
+			SELECT 1 FROM "Cart" WHERE "id" = ${cartId}::uuid FOR UPDATE
+		`;
+	}
 
+	async add(
+		cartId: string,
+		productId: string,
+		quantity: number,
+	): Promise<void> {
 		// A single upsert prevents lost increments, including simultaneous first adds.
 		const count = await this.prisma.$executeRaw`
 			INSERT INTO "CartItem" ("cartId", "productId", "quantity")
 			VALUES (${cartId}::uuid, ${productId}, ${quantity}::integer)
 			ON CONFLICT ("cartId", "productId") DO UPDATE
 			SET "quantity" = "CartItem"."quantity" + EXCLUDED."quantity"
-			WHERE "CartItem"."quantity" <= 2147483647 - EXCLUDED."quantity"
+			WHERE "CartItem"."quantity" <= ${MAX_CART_QUANTITY}::integer - EXCLUDED."quantity"
 		`;
 		if (count === 0) {
 			throw new CartError(
