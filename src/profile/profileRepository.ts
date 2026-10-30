@@ -1,21 +1,25 @@
-import type { UpdateProfileDto } from "../dtos/updateProfileDto";
+import type { AddressDto, UpdateProfileDto } from "../dtos/updateProfileDto";
 import { EmailAlreadyRegisteredError } from "../errors/emailAlreadyRegisteredError";
-import { Prisma, type PrismaClient } from "../generated/prisma/client";
+import {
+	Prisma,
+	type PrismaClient,
+	type User,
+	type UserAddresses,
+} from "../generated/prisma/client";
 
 export type ProfileUpdateData = Omit<UpdateProfileDto, "currentPassword">;
-
-const profileInclude = {
-	user: { orderBy: { addressId: "asc" } },
-} satisfies Prisma.UserInclude;
-
-export type ProfileUser = Prisma.UserGetPayload<{
-	include: typeof profileInclude;
-}>;
+export type ProfileUser = User & { addresses: UserAddresses[] };
 
 export interface ProfileRepository {
 	findById(id: number): Promise<ProfileUser | null>;
 	update(id: number, data: ProfileUpdateData): Promise<ProfileUser>;
 }
+
+const includeAddresses = {
+	addresses: { orderBy: { addressId: "asc" } },
+} as const;
+
+type AddressSlot = { addressType: "home" | "other"; address: AddressDto };
 
 export class PrismaProfileRepository implements ProfileRepository {
 	constructor(private readonly prisma: PrismaClient) {}
@@ -23,37 +27,56 @@ export class PrismaProfileRepository implements ProfileRepository {
 	async findById(id: number): Promise<ProfileUser | null> {
 		return this.prisma.user.findUnique({
 			where: { id },
-			include: profileInclude,
+			include: includeAddresses,
 		});
 	}
 
 	async update(id: number, data: ProfileUpdateData): Promise<ProfileUser> {
-		const { addressLine1, addressLine2, city, postcode, ...userData } = data;
-		const addressData = { addressLine1, addressLine2, city, postcode };
+		const { homeAddress, otherAddresses, ...userData } = data;
+		const wanted: AddressSlot[] = [
+			...(homeAddress
+				? [{ addressType: "home" as const, address: homeAddress }]
+				: []),
+			...otherAddresses.map((address) => ({
+				addressType: "other" as const,
+				address,
+			})),
+		];
 
 		try {
-			return await this.prisma.$transaction(async (transaction) => {
-				await transaction.user.update({ where: { id }, data: userData });
+			return await this.prisma.$transaction(async (tx) => {
+				await tx.user.update({ where: { id }, data: userData });
 
-				const address = await transaction.userAddresses.findFirst({
+				// Update rows in place so address IDs stay stable for future orders.
+				const existing = await tx.userAddresses.findMany({
 					where: { userId: id },
 					orderBy: { addressId: "asc" },
 				});
-
-				if (address) {
-					await transaction.userAddresses.update({
-						where: { addressId: address.addressId },
-						data: addressData,
-					});
-				} else if (Object.values(addressData).some((value) => value !== null)) {
-					await transaction.userAddresses.create({
-						data: { userId: id, ...addressData },
+				const unused = [...existing];
+				for (const { addressType, address } of wanted) {
+					const index = unused.findIndex(
+						(row) => row.addressType === addressType,
+					);
+					const [row] = index >= 0 ? unused.splice(index, 1) : [];
+					const values = { addressType, ...address };
+					if (row) {
+						await tx.userAddresses.update({
+							where: { addressId: row.addressId },
+							data: values,
+						});
+					} else {
+						await tx.userAddresses.create({ data: { userId: id, ...values } });
+					}
+				}
+				if (unused.length > 0) {
+					await tx.userAddresses.deleteMany({
+						where: { addressId: { in: unused.map((row) => row.addressId) } },
 					});
 				}
 
-				return transaction.user.findUniqueOrThrow({
+				return tx.user.findUniqueOrThrow({
 					where: { id },
-					include: profileInclude,
+					include: includeAddresses,
 				});
 			});
 		} catch (error) {

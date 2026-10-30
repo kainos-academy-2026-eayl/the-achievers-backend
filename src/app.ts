@@ -4,6 +4,7 @@ import express, {
 	type Request,
 	type Response,
 } from "express";
+import { createRequireAdmin } from "./auth/requireAdmin";
 import { createRequireAuth } from "./auth/requireAuth";
 import { type CartApiService, createCartRouter } from "./cart/cartController";
 import { createProductsRouter } from "./products/productController";
@@ -28,9 +29,10 @@ function getClientErrorStatus(error: unknown): number | undefined {
 
 export function createApp(
 	userService: Pick<UserService, "register">,
-	productService: Pick<ProductService, "getAll" | "getById">,
+	productService: Pick<ProductService, "getAll" | "getById" | "delete">,
 	loginService: Pick<LoginService, "login">,
 	cartService: CartApiService,
+	jwtSecret: string,
 	frontendOrigin = "http://localhost:8000",
 	profile?: {
 		service: Pick<ProfileService, "getProfile" | "updateProfile">;
@@ -67,7 +69,10 @@ export function createApp(
 
 	const usersRouter = createUsersRouter(userService);
 	app.use("/api/register", usersRouter);
-	app.use("/api/products", createProductsRouter(productService));
+	app.use(
+		"/api/products",
+		createProductsRouter(productService, createRequireAdmin(jwtSecret)),
+	);
 	app.use("/api/login", createLoginRouter(loginService));
 	app.use("/api/cart", createCartRouter(cartService));
 	if (profile) {

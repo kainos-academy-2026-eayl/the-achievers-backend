@@ -12,6 +12,7 @@ import { ProductService } from "../src/products/productService";
 import { createPrismaClient } from "../src/prismaClient";
 import { PrismaUserRepository } from "../src/userRegistration/userRepository";
 import { UserService } from "../src/userRegistration/userService";
+import { testJwtSecret } from "./helpers";
 
 const describeWithDatabase = describe.skipIf(!process.env.DATABASE_URL);
 const fixturePrefix = `cart-integration-${randomUUID()}`;
@@ -38,6 +39,7 @@ describeWithDatabase("cart API with PostgreSQL", () => {
 			"cart-integration-test-secret-with-at-least-32-bytes",
 		),
 		new CartService(new PrismaCartRepository(prisma), productRepository),
+		testJwtSecret,
 	);
 
 	function newCartId(): string {
