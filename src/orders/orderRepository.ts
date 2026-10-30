@@ -61,6 +61,9 @@ export class PrismaOrderRepository implements OrderRepository {
 	transaction<T>(
 		work: (repository: OrderRepository) => Promise<T>,
 	): Promise<T> {
+		if (!("$transaction" in this.prisma)) {
+			return work(this);
+		}
 		return this.prisma.$transaction((transaction) =>
 			work(new PrismaOrderRepository(transaction)),
 		);
