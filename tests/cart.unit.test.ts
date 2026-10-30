@@ -17,11 +17,13 @@ const product: Product = {
 	pricePence: 8999,
 	rating: null,
 	reviewCount: 0,
+	stock: 10,
 };
 const item = { cartId, productId: product.id, product, quantity: 2 };
 
 function setup() {
 	const repository = {
+		lockCart: vi.fn<CartRepository["lockCart"]>().mockResolvedValue(undefined),
 		findByCartId: vi.fn<CartRepository["findByCartId"]>().mockResolvedValue([]),
 		add: vi.fn<CartRepository["add"]>().mockResolvedValue(undefined),
 		setQuantity: vi.fn<CartRepository["setQuantity"]>().mockResolvedValue(true),
@@ -98,6 +100,10 @@ describe("cart API", () => {
 			price: 89.99,
 		});
 		expect(context.products.findById).toHaveBeenCalledWith(product.id);
+		expect(context.repository.lockCart).toHaveBeenCalledWith(cartId);
+		expect(
+			context.repository.lockCart.mock.invocationCallOrder[0]!,
+		).toBeLessThan(context.repository.add.mock.invocationCallOrder[0]!);
 		expect(context.repository.add).toHaveBeenCalledWith(cartId, product.id, 2);
 	});
 
@@ -111,6 +117,10 @@ describe("cart API", () => {
 			.send({ quantity: 3 });
 		expect(response.status).toBe(200);
 		expect(response.body.items[0].quantity).toBe(3);
+		expect(context.repository.lockCart).toHaveBeenCalledWith(cartId);
+		expect(
+			context.repository.lockCart.mock.invocationCallOrder[0]!,
+		).toBeLessThan(context.repository.setQuantity.mock.invocationCallOrder[0]!);
 		expect(context.repository.setQuantity).toHaveBeenCalledWith(
 			cartId,
 			product.id,
@@ -127,6 +137,10 @@ describe("cart API", () => {
 			items: [],
 			estimatedShippingCost: 0,
 		});
+		expect(context.repository.lockCart).toHaveBeenCalledWith(cartId);
+		expect(
+			context.repository.lockCart.mock.invocationCallOrder[0]!,
+		).toBeLessThan(context.repository.remove.mock.invocationCallOrder[0]!);
 		expect(context.repository.remove).toHaveBeenCalledWith(cartId, product.id);
 	});
 

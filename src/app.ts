@@ -7,6 +7,11 @@ import express, {
 import { createRequireAdmin } from "./auth/requireAdmin";
 import { createRequireAuth } from "./auth/requireAuth";
 import { type CartApiService, createCartRouter } from "./cart/cartController";
+import {
+	createAdminOrdersRouter,
+	createOrdersRouter,
+	type OrderApiService,
+} from "./orders/orderController";
 import { createProductsRouter } from "./products/productController";
 import type { ProductService } from "./products/productService";
 import { createProfileRouter } from "./profile/profileController";
@@ -36,6 +41,10 @@ export function createApp(
 	frontendOrigin = "http://localhost:8000",
 	profile?: {
 		service: Pick<ProfileService, "getProfile" | "updateProfile">;
+		jwtSecret: string;
+	},
+	orders?: {
+		service: OrderApiService;
 		jwtSecret: string;
 	},
 ): Express {
@@ -81,6 +90,19 @@ export function createApp(
 			createProfileRouter(
 				profile.service,
 				createRequireAuth(profile.jwtSecret),
+			),
+		);
+	}
+	if (orders) {
+		app.use(
+			"/api/orders",
+			createOrdersRouter(orders.service, createRequireAuth(orders.jwtSecret)),
+		);
+		app.use(
+			"/api/admin/orders",
+			createAdminOrdersRouter(
+				orders.service,
+				createRequireAdmin(orders.jwtSecret),
 			),
 		);
 	}

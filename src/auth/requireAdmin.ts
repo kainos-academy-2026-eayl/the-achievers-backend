@@ -16,6 +16,7 @@ export function createRequireAdmin(jwtSecret: string) {
 				algorithms: ["HS256"],
 				issuer: "the-achievers-backend",
 				audience: "the-achievers-api",
+				requiredClaims: ["exp"],
 			});
 			if (payload.role !== "admin") {
 				res.status(403).json({ error: "Admin access required" });

@@ -185,6 +185,7 @@ describe("GET /api/me", () => {
 			email: fresh.email,
 			name: fresh.name,
 			phone: null,
+			creditBalance: 100_000,
 			homeAddress: null,
 			otherAddresses: [],
 			createdAt: stored.createdAt.toISOString(),

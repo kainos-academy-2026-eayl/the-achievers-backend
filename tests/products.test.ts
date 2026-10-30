@@ -19,6 +19,7 @@ describe("GET /api/products", () => {
 				pricePence: 149999,
 				rating: 4.8,
 				reviewCount: 312,
+				stock: 25,
 			},
 			{
 				id: "laser-training-aid",
@@ -28,6 +29,7 @@ describe("GET /api/products", () => {
 				pricePence: null,
 				rating: null,
 				reviewCount: 0,
+				stock: 0,
 			},
 		]);
 		const app = createApp(
@@ -50,6 +52,8 @@ describe("GET /api/products", () => {
 				price: 1499.99,
 				rating: 4.8,
 				reviewCount: 312,
+				stock: 25,
+				inStock: true,
 			},
 			{
 				id: "laser-training-aid",
@@ -59,6 +63,8 @@ describe("GET /api/products", () => {
 				price: null,
 				rating: null,
 				reviewCount: 0,
+				stock: 0,
+				inStock: false,
 			},
 		]);
 	});
@@ -108,6 +114,7 @@ describe("GET /api/products/:id", () => {
 			pricePence: 149999,
 			rating: 4.8,
 			reviewCount: 312,
+			stock: 25,
 		});
 		const app = createApp(
 			noRegistration,
@@ -129,6 +136,8 @@ describe("GET /api/products/:id", () => {
 			price: 1499.99,
 			rating: 4.8,
 			reviewCount: 312,
+			stock: 25,
+			inStock: true,
 		});
 	});
 

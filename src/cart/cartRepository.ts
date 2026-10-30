@@ -5,6 +5,7 @@ import type { CartItemWithProduct } from "../model/cartItemWithProduct";
 
 export interface CartRepository {
 	transaction<T>(work: (repository: CartRepository) => Promise<T>): Promise<T>;
+	lockCart(cartId: string): Promise<void>;
 	findByCartId(cartId: string): Promise<CartItemWithProduct[]>;
 	add(cartId: string, productId: string, quantity: number): Promise<void>;
 	setQuantity(
@@ -34,17 +35,22 @@ export class PrismaCartRepository implements CartRepository {
 		});
 	}
 
-	async add(
-		cartId: string,
-		productId: string,
-		quantity: number,
-	): Promise<void> {
+	async lockCart(cartId: string): Promise<void> {
 		await this.prisma.$executeRaw`
 			INSERT INTO "Cart" ("id")
 			VALUES (${cartId}::uuid)
 			ON CONFLICT ("id") DO NOTHING
 		`;
+		await this.prisma.$queryRaw`
+			SELECT 1 FROM "Cart" WHERE "id" = ${cartId}::uuid FOR UPDATE
+		`;
+	}
 
+	async add(
+		cartId: string,
+		productId: string,
+		quantity: number,
+	): Promise<void> {
 		// A single upsert prevents lost increments, including simultaneous first adds.
 		const count = await this.prisma.$executeRaw`
 			INSERT INTO "CartItem" ("cartId", "productId", "quantity")
