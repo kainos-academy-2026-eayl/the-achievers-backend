@@ -178,8 +178,8 @@ describeWithDatabase("orders API with PostgreSQL", () => {
 				},
 			],
 			subtotal: 62.5,
-			shipping: 0,
-			total: 62.5,
+			shipping: 4.99,
+			total: 67.49,
 			shippingAddress: {
 				addressLine1: "1 Cue Street",
 				addressLine2: null,
