@@ -230,7 +230,7 @@ A new or empty cart returns HTTP `200` with
 `{"items":[],"estimatedShippingCost":0}`; the frontend uses this to display
 its empty-cart message.
 
-Quantities must be integers from `1` to `2147483647`, including the resulting
+Quantities must be integers from `1` to `99`, including the resulting
 quantity after adding units. Use DELETE, not quantity zero, to remove a product.
 Missing/invalid cart UUIDs, invalid quantities and malformed bodies return `400`.
 Unknown products and PATCH requests for items not in that cart return `404`.

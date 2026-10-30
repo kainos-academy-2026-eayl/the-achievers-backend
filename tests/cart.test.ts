@@ -62,25 +62,25 @@ describeWithDatabase("cart API with PostgreSQL", () => {
 					id: productIds.below,
 					name: "Integration Product Below Threshold",
 					category: "Integration",
-					pricePence: 4_999,
+					pricePence: 19_999,
 				},
 				{
 					id: productIds.exact,
 					name: "Integration Product At Threshold",
 					category: "Integration",
-					pricePence: 5_000,
+					pricePence: 20_000,
 				},
 				{
 					id: productIds.above,
 					name: "Integration Product Above Threshold",
 					category: "Integration",
-					pricePence: 5_001,
+					pricePence: 20_001,
 				},
 				{
 					id: productIds.quarter,
 					name: "Integration Quarter Product",
 					category: "Integration",
-					pricePence: 2_500,
+					pricePence: 10_000,
 				},
 				{
 					id: productIds.penny,
@@ -122,13 +122,23 @@ describeWithDatabase("cart API with PostgreSQL", () => {
 
 	it.each([
 		{
-			name: "£49.99",
+			name: "£199.99",
 			productId: productIds.below,
-			price: 49.99,
+			price: 199.99,
 			shipping: 4.99,
 		},
-		{ name: "£50.00", productId: productIds.exact, price: 50, shipping: 4.99 },
-		{ name: "£50.01", productId: productIds.above, price: 50.01, shipping: 0 },
+		{
+			name: "£200.00",
+			productId: productIds.exact,
+			price: 200,
+			shipping: 4.99,
+		},
+		{
+			name: "£200.01",
+			productId: productIds.above,
+			price: 200.01,
+			shipping: 0,
+		},
 	])(
 		"returns £$shipping shipping for a $name subtotal using real products",
 		async ({ productId, price, shipping }) => {
@@ -155,16 +165,16 @@ describeWithDatabase("cart API with PostgreSQL", () => {
 		const cartId = newCartId();
 		await add(cartId, productIds.quarter);
 		await add(cartId, productIds.quarter);
-		const exactlyFifty = await request(app)
+		const exactlyTwoHundred = await request(app)
 			.get("/api/cart")
 			.set("X-Cart-Id", cartId);
 
-		expect(exactlyFifty.status).toBe(200);
-		expect(exactlyFifty.body.estimatedShippingCost).toBe(4.99);
+		expect(exactlyTwoHundred.status).toBe(200);
+		expect(exactlyTwoHundred.body.estimatedShippingCost).toBe(4.99);
 
-		const overFifty = await add(cartId, productIds.penny);
-		expect(overFifty.status).toBe(200);
-		expect(overFifty.body.estimatedShippingCost).toBe(0);
+		const overTwoHundred = await add(cartId, productIds.penny);
+		expect(overTwoHundred.status).toBe(200);
+		expect(overTwoHundred.body.estimatedShippingCost).toBe(0);
 	});
 
 	it("serves all four cart endpoints without country or postcode parameters", async () => {
@@ -234,13 +244,65 @@ describeWithDatabase("cart API with PostgreSQL", () => {
 		});
 	});
 
-	it("enforces the database quantity limit for real cart writes", async () => {
+	it("enforces the quantity limit for real cart writes without changing the cart on failure", async () => {
 		const cartId = newCartId();
-		const maximum = await add(cartId, productIds.penny, MAX_CART_QUANTITY);
+		const initial = await add(cartId, productIds.penny, MAX_CART_QUANTITY - 1);
+		expect(initial.status).toBe(200);
+
+		const maximum = await add(cartId, productIds.penny);
 		expect(maximum.status).toBe(200);
-		expect(maximum.body.items[0].quantity).toBe(MAX_CART_QUANTITY);
+		expect(maximum.body.items[0].quantity).toBe(99);
 
 		const overflow = await add(cartId, productIds.penny);
 		expect(overflow.status).toBe(400);
+
+		const cart = await request(app).get("/api/cart").set("X-Cart-Id", cartId);
+		expect(cart.status).toBe(200);
+		expect(cart.body.items[0].quantity).toBe(99);
+	});
+
+	it("accepts 99 and rejects 100 for both add and update requests", async () => {
+		const cartId = newCartId();
+		const invalidAdd = await add(cartId, productIds.penny, 100);
+		expect(invalidAdd.status).toBe(400);
+
+		const maximum = await add(cartId, productIds.penny, 99);
+		expect(maximum.status).toBe(200);
+		expect(maximum.body.items[0].quantity).toBe(99);
+
+		const validUpdate = await request(app)
+			.patch(`/api/cart/items/${productIds.penny}`)
+			.set("X-Cart-Id", cartId)
+			.send({ quantity: 99 });
+		expect(validUpdate.status).toBe(200);
+		expect(validUpdate.body.items[0].quantity).toBe(99);
+
+		const invalidUpdate = await request(app)
+			.patch(`/api/cart/items/${productIds.penny}`)
+			.set("X-Cart-Id", cartId)
+			.send({ quantity: 100 });
+		expect(invalidUpdate.status).toBe(400);
+
+		const cart = await request(app).get("/api/cart").set("X-Cart-Id", cartId);
+		expect(cart.status).toBe(200);
+		expect(cart.body.items[0].quantity).toBe(99);
+	});
+
+	it("does not exceed 99 when units are added concurrently", async () => {
+		const cartId = newCartId();
+		const initial = await add(cartId, productIds.penny, 98);
+		expect(initial.status).toBe(200);
+
+		const responses = await Promise.all([
+			add(cartId, productIds.penny),
+			add(cartId, productIds.penny),
+		]);
+		expect(responses.map((response) => response.status).sort()).toEqual([
+			200, 400,
+		]);
+
+		const cart = await request(app).get("/api/cart").set("X-Cart-Id", cartId);
+		expect(cart.status).toBe(200);
+		expect(cart.body.items[0].quantity).toBe(99);
 	});
 });

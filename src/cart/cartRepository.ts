@@ -1,3 +1,4 @@
+import { MAX_CART_QUANTITY } from "../dtos/cartDto";
 import { CartError } from "../errors/cartError";
 import type { Prisma, PrismaClient } from "../generated/prisma/client";
 import type { CartItemWithProduct } from "../model/cartItemWithProduct";
@@ -50,7 +51,7 @@ export class PrismaCartRepository implements CartRepository {
 			VALUES (${cartId}::uuid, ${productId}, ${quantity}::integer)
 			ON CONFLICT ("cartId", "productId") DO UPDATE
 			SET "quantity" = "CartItem"."quantity" + EXCLUDED."quantity"
-			WHERE "CartItem"."quantity" <= 2147483647 - EXCLUDED."quantity"
+			WHERE "CartItem"."quantity" <= ${MAX_CART_QUANTITY}::integer - EXCLUDED."quantity"
 		`;
 		if (count === 0) {
 			throw new CartError(

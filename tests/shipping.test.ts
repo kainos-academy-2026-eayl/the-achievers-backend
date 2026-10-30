@@ -3,9 +3,9 @@ import { calculateShippingCostPence } from "../src/shipping";
 
 describe("GBP standard shipping", () => {
 	it.each([
-		{ subtotalPence: 4_999n, expected: 499 },
-		{ subtotalPence: 5_000n, expected: 499 },
-		{ subtotalPence: 5_001n, expected: 0 },
+		{ subtotalPence: 19_999n, expected: 499 },
+		{ subtotalPence: 20_000n, expected: 499 },
+		{ subtotalPence: 20_001n, expected: 0 },
 		{ subtotalPence: 0n, expected: 499 },
 		{ subtotalPence: 4_611_686_014_132_420_609n, expected: 0 },
 	])(

@@ -63,7 +63,7 @@ describe("cart API", () => {
 					quantity: 2,
 				},
 			],
-			estimatedShippingCost: 0,
+			estimatedShippingCost: 4.99,
 		});
 		expect(context.repository.findByCartId).toHaveBeenCalledWith(cartId);
 	});
