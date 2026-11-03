@@ -4,9 +4,13 @@ import express, {
 	type Request,
 	type Response,
 } from "express";
+import { createRequireAdmin } from "./auth/requireAdmin";
 import { createRequireAuth } from "./auth/requireAuth";
 import { type CartApiService, createCartRouter } from "./cart/cartController";
-import { createProductsRouter } from "./products/productController";
+import {
+	createProductCreationRouter,
+	createProductsRouter,
+} from "./products/productController";
 import type { ProductService } from "./products/productService";
 import { createProfileRouter } from "./profile/profileController";
 import type { ProfileService } from "./profile/profileService";
@@ -34,6 +38,10 @@ export function createApp(
 	frontendOrigin = "http://localhost:8000",
 	profile?: {
 		service: Pick<ProfileService, "getProfile" | "updateProfile">;
+		jwtSecret: string;
+	},
+	adminProducts?: {
+		service: Pick<ProductService, "create">;
 		jwtSecret: string;
 	},
 ): Express {
@@ -68,6 +76,15 @@ export function createApp(
 	const usersRouter = createUsersRouter(userService);
 	app.use("/api/register", usersRouter);
 	app.use("/api/products", createProductsRouter(productService));
+	if (adminProducts) {
+		app.use(
+			"/api/products",
+			createProductCreationRouter(
+				adminProducts.service,
+				createRequireAdmin(adminProducts.jwtSecret),
+			),
+		);
+	}
 	app.use("/api/login", createLoginRouter(loginService));
 	app.use("/api/cart", createCartRouter(cartService));
 	if (profile) {

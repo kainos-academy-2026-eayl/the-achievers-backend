@@ -108,11 +108,49 @@ least 32 bytes and fails at startup if the secret is missing or too short.
 Tokens use HS256, expire after one hour, and identify the user by their internal
 ID in `sub`. The issuer is `the-achievers-backend` and audience is
 `the-achievers-api`. Keep the secret stable across restarts and private to trusted
-servers. This endpoint issues tokens only: existing routes remain public. Future
-protected routes must verify signature, algorithm, issuer, audience, and expiry
-before trusting a token. Use HTTPS and login rate limiting before public deployment.
+servers. Product creation requires an admin token; catalogue reads and anonymous
+cart routes remain public. Protected routes verify signature, algorithm, issuer,
+audience, and expiry before trusting a token. Use HTTPS and login rate limiting
+before public deployment.
 For an Express/Nunjucks frontend, keep the token in its server-side session rather
 than exposing it to browser scripts.
+
+## Admin product creation (KAN-36)
+
+`POST /api/products` creates a catalogue product. Send the login JWT in the
+`Authorization` header using the Bearer scheme. Only admin tokens are accepted:
+missing, invalid or expired credentials return `401`, and non-admins receive `403`.
+
+```json
+{
+  "name": "Maple Cue",
+  "description": "A balanced maple cue.",
+  "category": "Cues",
+  "price": "89.99"
+}
+```
+
+Name, description and category are required, trimmed strings, limited to 200,
+2000 and 100 characters respectively. Category is free text. Price is required
+in pounds as a decimal string or JSON number, from `0` to `21474836.47`, with at
+most two decimal places. Decimal digits are converted to integer pence without
+rounding fractional pounds. Invalid input returns `400` with
+`{"error":"Validation failed","fieldErrors":{"name":"Name is required"}}`.
+
+Success returns `201`, a `Location` header pointing to `/api/products/:id`, and
+the normal product response (including a numeric price in pounds). The server
+generates a UUID product ID; rating defaults to null and review count to zero.
+Clients cannot set IDs, ratings or review counts. Duplicate names are allowed.
+Database failures are logged and return a generic `500` response.
+
+Products persist through the existing Prisma repository and appear immediately
+in catalogue GET requests. Stock is not included in this feature, and no schema
+change or migration is needed. Application startup wires creation to the same
+JWT secret used for login; isolated apps may omit the optional admin-products
+dependency, in which case the creation route is not mounted.
+
+Run `npm test -- tests/productCreation.test.ts tests/products.test.ts tests/requireAdmin.test.ts`.
+These isolated tests require no running database.
 
 ## Local development
 

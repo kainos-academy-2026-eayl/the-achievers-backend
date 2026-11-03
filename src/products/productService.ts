@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+import type { CreateProductDto } from "../dtos/createProductDto";
 import type { ProductRepository } from "./productRepository";
 
 export class ProductService {
@@ -9,5 +11,9 @@ export class ProductService {
 
 	getById(id: string) {
 		return this.productRepository.findById(id);
+	}
+
+	create(data: CreateProductDto) {
+		return this.productRepository.create({ ...data, id: randomUUID() });
 	}
 }

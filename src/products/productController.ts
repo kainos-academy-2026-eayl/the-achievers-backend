@@ -1,4 +1,5 @@
-import { Router } from "express";
+import { type RequestHandler, Router } from "express";
+import { parseCreateProductDto } from "../dtos/createProductDto";
 import { toProductResponseDto } from "../mappers/productMapper";
 import type { ProductService } from "./productService";
 
@@ -21,5 +22,29 @@ export function createProductsRouter(
 		res.status(200).json(toProductResponseDto(product));
 	});
 
+	return router;
+}
+
+export function createProductCreationRouter(
+	productService: Pick<ProductService, "create">,
+	requireAdmin: RequestHandler,
+): Router {
+	const router = Router();
+	router.post("/", requireAdmin, async (req, res) => {
+		res.set("Cache-Control", "no-store");
+		const parsed = parseCreateProductDto(req.body);
+		if (!parsed.success) {
+			res.status(400).json({
+				error: parsed.message,
+				fieldErrors: parsed.fieldErrors,
+			});
+			return;
+		}
+		const product = await productService.create(parsed.data);
+		res
+			.status(201)
+			.location(`/api/products/${encodeURIComponent(product.id)}`)
+			.json(toProductResponseDto(product));
+	});
 	return router;
 }

@@ -45,6 +45,10 @@ const app = createApp(
 		service: new ProfileService(new PrismaProfileRepository(prisma)),
 		jwtSecret: process.env.JWT_SECRET,
 	},
+	{
+		service: productService,
+		jwtSecret: process.env.JWT_SECRET,
+	},
 );
 
 // Keep everything below this comment at the bottom of the file
