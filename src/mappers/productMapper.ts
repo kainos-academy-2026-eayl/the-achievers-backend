@@ -8,6 +8,8 @@ export interface ProductResponseDto {
 	price: number | null;
 	rating: number | null;
 	reviewCount: number;
+	stock: number;
+	inStock: boolean;
 }
 
 export function toProductResponseDto(product: Product): ProductResponseDto {
@@ -19,5 +21,7 @@ export function toProductResponseDto(product: Product): ProductResponseDto {
 		price: product.pricePence === null ? null : product.pricePence / 100,
 		rating: product.rating,
 		reviewCount: product.reviewCount,
+		stock: product.stock,
+		inStock: product.stock > 0,
 	};
 }

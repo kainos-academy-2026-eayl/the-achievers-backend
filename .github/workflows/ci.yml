@@ -14,6 +14,25 @@ jobs:
     name: Build, lint and test
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: app_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test -d app_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://test:test@localhost:5432/app_test
+      JWT_SECRET: ci-only-jwt-secret-not-used-anywhere-else-123456
+
     steps:
       - name: Download repository
         uses: actions/checkout@v4
@@ -35,6 +54,9 @@ jobs:
 
       - name: Check formatting
         run: npm run format:check
+
+      - name: Apply database migrations
+        run: npx prisma migrate deploy
 
       - name: Test
         run: npm test

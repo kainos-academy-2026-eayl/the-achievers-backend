@@ -1,26 +1,61 @@
 import "dotenv/config";
 import { createApp } from "./app";
+import { PrismaCartRepository } from "./cart/cartRepository";
+import { CartService } from "./cart/cartService";
+import { PrismaOrderRepository } from "./orders/orderRepository";
+import { OrderService } from "./orders/orderService";
 import { createPrismaClient } from "./prismaClient";
 import { PrismaProductRepository } from "./products/productRepository";
-import { PrismaUserRepository } from "./userRegistration/userRepository";
 import { ProductService } from "./products/productService";
+import { PrismaProfileRepository } from "./profile/profileRepository";
+import { ProfileService } from "./profile/profileService";
+import { PrismaSafeWordHintRepository } from "./safeWordHint/safeWordHintRepository";
+import { SafeWordHintService } from "./safeWordHint/safeWordHintService";
+import { PrismaLoginRepository } from "./userLogin/loginRepository";
+import { LoginService } from "./userLogin/loginService";
+import { PrismaUserRepository } from "./userRegistration/userRepository";
 import { UserService } from "./userRegistration/userService";
 
-if (!process.env.PORT) {
-	throw new Error("PORT environment variable is not set");
-}
-
 const HOST = "0.0.0.0";
-const PORT = Number(process.env.PORT);
+const PORT = Number(process.env.PORT ?? "3000");
 
 if (!Number.isInteger(PORT) || PORT < 0 || PORT > 65535) {
 	throw new Error(`Invalid PORT: ${process.env.PORT}`);
 }
 
+if (!process.env.JWT_SECRET) {
+	throw new Error("JWT_SECRET environment variable is not set");
+}
+
 const prisma = createPrismaClient();
 const userService = new UserService(new PrismaUserRepository(prisma));
-const productService = new ProductService(new PrismaProductRepository(prisma));
-const app = createApp(userService, productService);
+const productRepository = new PrismaProductRepository(prisma);
+const productService = new ProductService(productRepository);
+const loginService = new LoginService(
+	new PrismaLoginRepository(prisma),
+	process.env.JWT_SECRET,
+);
+const cartService = new CartService(
+	new PrismaCartRepository(prisma),
+	productRepository,
+);
+const app = createApp(
+	userService,
+	productService,
+	loginService,
+	cartService,
+	process.env.JWT_SECRET,
+	process.env.FRONTEND_ORIGIN ?? "http://localhost:8000",
+	{
+		service: new ProfileService(new PrismaProfileRepository(prisma)),
+		jwtSecret: process.env.JWT_SECRET,
+	},
+	{
+		service: new OrderService(new PrismaOrderRepository(prisma)),
+		jwtSecret: process.env.JWT_SECRET,
+	},
+	new SafeWordHintService(new PrismaSafeWordHintRepository(prisma)),
+);
 
 // Keep everything below this comment at the bottom of the file
 const server = app.listen(PORT, HOST, () => {

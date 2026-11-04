@@ -4,9 +4,24 @@ import express, {
 	type Request,
 	type Response,
 } from "express";
+import { createRequireAdmin } from "./auth/requireAdmin";
+import { createRequireAuth } from "./auth/requireAuth";
+import { type CartApiService, createCartRouter } from "./cart/cartController";
+import {
+	createAdminOrdersRouter,
+	createOrdersRouter,
+	type OrderApiService,
+} from "./orders/orderController";
 import { createProductsRouter } from "./products/productController";
-import { createUsersRouter } from "./userRegistration/userController";
 import type { ProductService } from "./products/productService";
+import { createProfileRouter } from "./profile/profileController";
+import type { ProfileService } from "./profile/profileService";
+import { createRateLimiter } from "./rateLimit";
+import { createSafeWordHintRouter } from "./safeWordHint/safeWordHintController";
+import type { SafeWordHintService } from "./safeWordHint/safeWordHintService";
+import { createLoginRouter } from "./userLogin/loginController";
+import type { LoginService } from "./userLogin/loginService";
+import { createUsersRouter } from "./userRegistration/userController";
 import type { UserService } from "./userRegistration/userService";
 
 function getClientErrorStatus(error: unknown): number | undefined {
@@ -22,9 +37,42 @@ function getClientErrorStatus(error: unknown): number | undefined {
 
 export function createApp(
 	userService: Pick<UserService, "register">,
-	productService: Pick<ProductService, "getAll" | "getById">,
+	productService: Pick<ProductService, "getAll" | "getById" | "delete">,
+	loginService: Pick<LoginService, "login">,
+	cartService: CartApiService,
+	jwtSecret: string,
+	frontendOrigin = "http://localhost:8000",
+	profile?: {
+		service: Pick<ProfileService, "getProfile" | "updateProfile">;
+		jwtSecret: string;
+	},
+	orders?: {
+		service: OrderApiService;
+		jwtSecret: string;
+	},
+	safeWordHintService?: Pick<SafeWordHintService, "getSafeWordHint">,
 ): Express {
 	const app = express();
+
+	app.use((req, res, next) => {
+		res.vary("Origin");
+		if (req.get("Origin") === frontendOrigin) {
+			res.set("Access-Control-Allow-Origin", frontendOrigin);
+			if (req.method === "OPTIONS") {
+				res.set(
+					"Access-Control-Allow-Methods",
+					"GET, POST, PATCH, DELETE, OPTIONS",
+				);
+				res.set(
+					"Access-Control-Allow-Headers",
+					"Content-Type, X-Cart-Id, Authorization",
+				);
+				res.sendStatus(204);
+				return;
+			}
+		}
+		next();
+	});
 
 	app.use(express.json({ limit: "10kb" }));
 
@@ -34,7 +82,42 @@ export function createApp(
 
 	const usersRouter = createUsersRouter(userService);
 	app.use("/api/register", usersRouter);
-	app.use("/api/products", createProductsRouter(productService));
+	app.use(
+		"/api/products",
+		createProductsRouter(productService, createRequireAdmin(jwtSecret)),
+	);
+	app.use("/api/login", createLoginRouter(loginService));
+	app.use("/api/cart", createCartRouter(cartService));
+	if (profile) {
+		app.use(
+			"/api/me",
+			createProfileRouter(
+				profile.service,
+				createRequireAuth(profile.jwtSecret),
+			),
+		);
+	}
+	if (orders) {
+		app.use(
+			"/api/orders",
+			createOrdersRouter(orders.service, createRequireAuth(orders.jwtSecret)),
+		);
+		app.use(
+			"/api/admin/orders",
+			createAdminOrdersRouter(
+				orders.service,
+				createRequireAdmin(orders.jwtSecret),
+			),
+		);
+	}
+	if (safeWordHintService) {
+		// The hint response reveals whether an email has an account.
+		app.use(
+			"/api/safe-word-hint",
+			createRateLimiter({ limit: 5, windowMs: 60_000 }),
+			createSafeWordHintRouter(safeWordHintService),
+		);
+	}
 
 	app.use(
 		(error: unknown, _req: Request, res: Response, _next: NextFunction) => {

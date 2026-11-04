@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import * as argon2 from "argon2";
 import type { Prisma } from "../src/generated/prisma/client";
 import { createPrismaClient } from "../src/prismaClient";
 
@@ -11,6 +13,7 @@ const products: Prisma.ProductCreateInput[] = [
         pricePence: 149999,
         rating: 4.8,
         reviewCount: 312,
+        stock: 25,
     },
     {
         id: "calluminator-silencer",
@@ -21,6 +24,7 @@ const products: Prisma.ProductCreateInput[] = [
         pricePence: 12999,
         rating: 4.6,
         reviewCount: 148,
+        stock: 60,
     },
     {
         id: "calluminator-scope",
@@ -31,6 +35,7 @@ const products: Prisma.ProductCreateInput[] = [
         pricePence: 19999,
         rating: 4.7,
         reviewCount: 203,
+        stock: 40,
     },
     {
         id: "ball-guard-helmet",
@@ -41,6 +46,7 @@ const products: Prisma.ProductCreateInput[] = [
         pricePence: 3999,
         rating: 4.4,
         reviewCount: 87,
+        stock: 120,
     },
     {
         id: "full-body-protector",
@@ -51,6 +57,7 @@ const products: Prisma.ProductCreateInput[] = [
         pricePence: 8999,
         rating: 4.2,
         reviewCount: 54,
+        stock: 35,
     },
     {
         id: "pro-series-maple-cue",
@@ -61,6 +68,7 @@ const products: Prisma.ProductCreateInput[] = [
         pricePence: 8999,
         rating: 4.5,
         reviewCount: 421,
+        stock: 80,
     },
     {
         id: "carbon-break-cue",
@@ -71,6 +79,7 @@ const products: Prisma.ProductCreateInput[] = [
         pricePence: 14999,
         rating: 4.6,
         reviewCount: 96,
+        stock: 15,
     },
     {
         id: "hard-shell-cue-case",
@@ -81,6 +90,7 @@ const products: Prisma.ProductCreateInput[] = [
         pricePence: 4999,
         rating: 4.3,
         reviewCount: 178,
+        stock: 50,
     },
     {
         id: "tournament-ball-set",
@@ -91,6 +101,7 @@ const products: Prisma.ProductCreateInput[] = [
         pricePence: 6499,
         rating: 4.7,
         reviewCount: 265,
+        stock: 45,
     },
     {
         id: "training-cue-ball",
@@ -101,6 +112,7 @@ const products: Prisma.ProductCreateInput[] = [
         pricePence: 1299,
         rating: 4.1,
         reviewCount: 39,
+        stock: 150,
     },
     {
         id: "chalk-tip-kit",
@@ -111,6 +123,7 @@ const products: Prisma.ProductCreateInput[] = [
         pricePence: 1499,
         rating: 4.4,
         reviewCount: 512,
+        stock: 300,
     },
     {
         id: "triangle-rack",
@@ -120,6 +133,7 @@ const products: Prisma.ProductCreateInput[] = [
         pricePence: 1299,
         rating: 4.0,
         reviewCount: 61,
+        stock: 70,
     },
     {
         id: "table-cover",
@@ -129,6 +143,7 @@ const products: Prisma.ProductCreateInput[] = [
         pricePence: 3499,
         rating: 4.2,
         reviewCount: 22,
+        stock: 0,
     },
     {
         id: "laser-training-aid",
@@ -139,16 +154,61 @@ const products: Prisma.ProductCreateInput[] = [
         pricePence: null,
         rating: null,
         reviewCount: 0,
+        stock: 8,
     },
 ];
+
+type AdminSeed = { email: string; name: string; };
+
+async function loadAdminSeed(): Promise<AdminSeed> {
+    const raw = await readFile(
+        new URL("./admin.seed.json", import.meta.url),
+        "utf-8",
+    );
+    return JSON.parse(raw) as AdminSeed;
+}
 
 const prisma = createPrismaClient();
 
 try {
+    const adminSeed = await loadAdminSeed();
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    if (adminPassword) {
+        if (adminPassword.length < 12 || adminPassword.length > 128) {
+            throw new Error(
+                "Admin seed password must be between 12 and 128 characters long",
+            );
+        }
+        const passwordHash = await argon2.hash(adminPassword, {
+            type: argon2.argon2id,
+        });
+        const email = adminSeed.email.trim().toLowerCase();
+        const user = await prisma.user.upsert({
+            where: { email },
+            update: { name: adminSeed.name, passwordHash },
+            create: { email, name: adminSeed.name, passwordHash },
+        });
+        await prisma.admin.upsert({
+            where: { userId: user.id },
+            update: {},
+            create: { userId: user.id },
+        });
+        console.log(`Seeded admin ${adminSeed.email}`);
+    } else {
+        console.log("ADMIN_PASSWORD is not set, skipping admin seed");
+    }
+
     for (const product of products) {
         await prisma.product.upsert({
             where: { id: product.id },
-            update: product,
+            update: {
+                name: product.name,
+                description: product.description,
+                category: product.category,
+                pricePence: product.pricePence,
+                rating: product.rating,
+                reviewCount: product.reviewCount,
+            },
             create: product,
         });
     }

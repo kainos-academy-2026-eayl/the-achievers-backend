@@ -13,11 +13,16 @@ export class UserService {
 
 	async register(input: RegisterUserDto) {
 		const passwordHash = await this.hashPassword(input.password);
+		const safeWordHash = await argon2.hash(input.safeWord, {
+			type: argon2.argon2id,
+		});
 
 		return this.userRepository.create({
 			email: input.email,
 			name: input.name,
 			passwordHash,
+			safeWordHint: input.safeWordHint,
+			safeWordHash,
 		});
 	}
 }

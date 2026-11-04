@@ -10,4 +10,8 @@ export class ProductService {
 	getById(id: string) {
 		return this.productRepository.findById(id);
 	}
+
+	delete(id: string) {
+		return this.productRepository.delete(id);
+	}
 }

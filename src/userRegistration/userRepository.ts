@@ -4,12 +4,7 @@ import {
 	type User,
 } from "../generated/prisma/client";
 import { EmailAlreadyRegisteredError } from "../errors/emailAlreadyRegisteredError";
-
-export interface CreateUserData {
-	email: string;
-	name: string;
-	passwordHash: string;
-}
+import type { CreateUserData } from "../model/createUserData";
 
 export interface UserRepository {
 	create(data: CreateUserData): Promise<User>;
