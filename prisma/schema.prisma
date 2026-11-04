@@ -25,6 +25,7 @@ model User {
   addresses    UserAddresses[]
   admin        Admin?
   orders       Order[]
+  reviews      Review[]
 }
 
 model Admin {
@@ -45,6 +46,7 @@ model Product {
   stock       Int        @default(0)
   cartItems   CartItem[]
   orderItems  OrderItem[]
+  reviews     Review[]
 }
 
 model Cart {
@@ -93,6 +95,7 @@ model Order {
   createdAt     DateTime    @default(now())
   user          User        @relation(fields: [userId], references: [id], onDelete: Restrict)
   items         OrderItem[]
+  reviews       Review[]
 
   @@index([userId, createdAt])
   @@index([createdAt])
@@ -110,4 +113,23 @@ model OrderItem {
 
   @@index([orderId])
   @@index([productId])
+}
+
+model Review {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  productId String
+  orderId   String   @db.Uuid
+  // 1-5, enforced by a CHECK constraint in the migration
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([productId])
+  @@index([orderId])
 }
