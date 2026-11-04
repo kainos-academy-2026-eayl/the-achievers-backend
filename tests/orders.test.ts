@@ -40,6 +40,7 @@ describeWithDatabase("orders API with PostgreSQL", () => {
 		jwtSecret,
 		undefined,
 		undefined,
+		undefined,
 		{
 			service: new OrderService(new PrismaOrderRepository(prisma)),
 			jwtSecret,

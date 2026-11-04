@@ -49,6 +49,10 @@ const app = createApp(
 		jwtSecret: process.env.JWT_SECRET,
 	},
 	{
+		service: productService,
+		jwtSecret: process.env.JWT_SECRET,
+	},
+	{
 		service: new OrderService(new PrismaOrderRepository(prisma)),
 		jwtSecret: process.env.JWT_SECRET,
 	},
