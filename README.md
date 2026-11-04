@@ -150,6 +150,40 @@ JWT secret used for login; isolated apps may omit the optional admin-products
 dependency, in which case the creation route is not mounted.
 
 Run `npm test -- tests/productCreation.test.ts tests/products.test.ts tests/requireAdmin.test.ts`.
+
+## Admin product updates
+
+`PUT /api/products/:id` replaces all five editable fields: `name`, `description`,
+`category`, `price` (pounds) and `stock`. Every field is required. Text and price
+validation reuse the product-creation rules. Stock accepts a whole number or a
+digits-only string between `0` and `2147483647`; fractional, negative and
+partially numeric strings are rejected. IDs, ratings and review counts remain
+server-managed.
+
+The endpoint requires a valid admin login token. Success returns `200` with the
+updated catalogue response and `Cache-Control: no-store`. Invalid input returns
+`400` with field errors; a missing product returns `404`, including deletion
+during an update. Unexpected database failures are logged and return a generic
+`500`, never a misleading not-found response. No migration is needed.
+
+Run `npm test -- tests/productUpdate.test.ts tests/productCreation.test.ts`.
+
+## Admin product deletion
+
+`DELETE /api/products/:id` permanently deletes a product. Supply the login JWT
+in the `Authorization` header using the Bearer scheme. Only tokens with
+`role: "admin"` are accepted. Missing, invalid or expired tokens return `401`;
+authenticated non-admins receive `403`. Successful deletion returns `204` with no
+body; a missing product (including a repeated deletion) returns `404` with
+`{"error":"Product not found"}`. Unexpected failures are logged and return `500`
+without exposing database details. Public product GET routes are unchanged.
+
+Existing foreign keys cascade deletion to all cart items referencing that product.
+This is permanent, not a soft delete; no schema migration is required. Running
+the product seed again can recreate seeded products. Browser preflights from the
+configured frontend origin allow the `Authorization` header.
+
+Run `npm test -- tests/productDeletion.test.ts tests/products.test.ts tests/requireAdmin.test.ts`.
 These isolated tests require no running database.
 
 ## Local development

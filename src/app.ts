@@ -9,6 +9,7 @@ import { createRequireAuth } from "./auth/requireAuth";
 import { type CartApiService, createCartRouter } from "./cart/cartController";
 import {
 	createProductCreationRouter,
+	createProductUpdateRouter,
 	createProductsRouter,
 } from "./products/productController";
 import type { ProductService } from "./products/productService";
@@ -41,7 +42,7 @@ export function createApp(
 		jwtSecret: string;
 	},
 	adminProducts?: {
-		service: Pick<ProductService, "create">;
+		service: Pick<ProductService, "create" | "update" | "getById">;
 		jwtSecret: string;
 	},
 ): Express {
@@ -54,7 +55,7 @@ export function createApp(
 			if (req.method === "OPTIONS") {
 				res.set(
 					"Access-Control-Allow-Methods",
-					"GET, POST, PATCH, DELETE, OPTIONS",
+					"GET, POST, PUT, PATCH, DELETE, OPTIONS",
 				);
 				res.set(
 					"Access-Control-Allow-Headers",
@@ -80,6 +81,13 @@ export function createApp(
 		app.use(
 			"/api/products",
 			createProductCreationRouter(
+				adminProducts.service,
+				createRequireAdmin(adminProducts.jwtSecret),
+			),
+		);
+		app.use(
+			"/api/products",
+			createProductUpdateRouter(
 				adminProducts.service,
 				createRequireAdmin(adminProducts.jwtSecret),
 			),
