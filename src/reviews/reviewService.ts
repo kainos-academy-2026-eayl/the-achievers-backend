@@ -25,6 +25,9 @@ export class ReviewService {
 			if (!order) {
 				throw new ReviewError("Order not found", 404);
 			}
+			if (!(await repository.lockProduct(productId))) {
+				throw new ReviewError("Product not found", 404);
+			}
 			if (displayStatus(order) !== "delivered") {
 				throw new ReviewError(
 					"Reviews are only available for delivered orders",
@@ -36,9 +39,6 @@ export class ReviewService {
 					"You can only review products you purchased",
 					403,
 				);
-			}
-			if (!(await repository.lockProduct(productId))) {
-				throw new ReviewError("Product not found", 404);
 			}
 			const existing = await repository.findForUserAndProduct(
 				userId,
