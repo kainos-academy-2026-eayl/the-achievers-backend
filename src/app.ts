@@ -16,6 +16,10 @@ import { createProductsRouter } from "./products/productController";
 import type { ProductService } from "./products/productService";
 import { createProfileRouter } from "./profile/profileController";
 import type { ProfileService } from "./profile/profileService";
+import {
+	createReviewsRouter,
+	type ReviewApiService,
+} from "./reviews/reviewController";
 import { createLoginRouter } from "./userLogin/loginController";
 import type { LoginService } from "./userLogin/loginService";
 import { createUsersRouter } from "./userRegistration/userController";
@@ -47,6 +51,10 @@ export function createApp(
 		service: OrderApiService;
 		jwtSecret: string;
 	},
+	reviews?: {
+		service: ReviewApiService;
+		jwtSecret: string;
+	},
 ): Express {
 	const app = express();
 
@@ -57,7 +65,7 @@ export function createApp(
 			if (req.method === "OPTIONS") {
 				res.set(
 					"Access-Control-Allow-Methods",
-					"GET, POST, PATCH, DELETE, OPTIONS",
+					"GET, POST, PUT, PATCH, DELETE, OPTIONS",
 				);
 				res.set(
 					"Access-Control-Allow-Headers",
@@ -103,6 +111,15 @@ export function createApp(
 			createAdminOrdersRouter(
 				orders.service,
 				createRequireAdmin(orders.jwtSecret),
+			),
+		);
+	}
+	if (reviews) {
+		app.use(
+			"/api/reviews",
+			createReviewsRouter(
+				reviews.service,
+				createRequireAuth(reviews.jwtSecret),
 			),
 		);
 	}

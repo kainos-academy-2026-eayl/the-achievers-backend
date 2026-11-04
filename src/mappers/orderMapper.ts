@@ -26,12 +26,14 @@ export interface OrderResponseDto {
 }
 
 export interface AdminOrderResponseDto extends OrderResponseDto {
-	customer: { id: number; email: string; name: string; };
+	customer: { id: number; email: string; name: string };
 }
 
 const DELIVERY_TIME_MS = 7 * 24 * 60 * 60 * 1000;
 
-function displayStatus(order: OrderWithItems): string {
+export function displayStatus(
+	order: Pick<OrderWithItems, "status" | "createdAt">,
+): string {
 	const isDue = Date.now() - order.createdAt.getTime() >= DELIVERY_TIME_MS;
 	return order.status === "placed" && isDue ? "delivered" : order.status;
 }
