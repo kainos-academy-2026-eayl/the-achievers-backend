@@ -16,4 +16,8 @@ export class ProductService {
 	create(data: CreateProductDto) {
 		return this.productRepository.create({ ...data, id: randomUUID() });
 	}
+
+	delete(id: string) {
+		return this.productRepository.delete(id);
+	}
 }

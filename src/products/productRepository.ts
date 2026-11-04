@@ -5,6 +5,7 @@ export interface ProductRepository {
 	findAll(): Promise<Product[]>;
 	findById(id: string): Promise<Product | null>;
 	create(data: CreateProductDto & { id: string }): Promise<Product>;
+	delete(id: string): Promise<boolean>;
 }
 
 export class PrismaProductRepository implements ProductRepository {
@@ -20,5 +21,10 @@ export class PrismaProductRepository implements ProductRepository {
 
 	create(data: CreateProductDto & { id: string }): Promise<Product> {
 		return this.prisma.product.create({ data });
+	}
+
+	async delete(id: string): Promise<boolean> {
+		const { count } = await this.prisma.product.deleteMany({ where: { id } });
+		return count > 0;
 	}
 }

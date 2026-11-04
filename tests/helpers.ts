@@ -1,6 +1,8 @@
 import { vi } from "vitest";
 import type { CartApiService } from "../src/cart/cartController";
 
+export const testJwtSecret = "test-only-secret-not-for-production-123456789";
+
 export const noCart: CartApiService = {
 	get: vi.fn(),
 	add: vi.fn(),
@@ -10,6 +12,7 @@ export const noCart: CartApiService = {
 
 export const emptyProfileFields = {
 	phone: null,
+	creditBalancePence: 0,
 	addressLine1: null,
 	addressLine2: null,
 	city: null,

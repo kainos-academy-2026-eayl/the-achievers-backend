@@ -16,6 +16,7 @@ export class CartService {
 	async add(cartId: string, productId: string, quantity: number) {
 		await this.requirePricedProduct(productId);
 		return this.cartRepository.transaction(async (repository) => {
+			await repository.lockCart(cartId);
 			await repository.add(cartId, productId, quantity);
 			return this.getFromRepository(cartId, repository);
 		});
@@ -24,6 +25,7 @@ export class CartService {
 	async setQuantity(cartId: string, productId: string, quantity: number) {
 		await this.requirePricedProduct(productId);
 		return this.cartRepository.transaction(async (repository) => {
+			await repository.lockCart(cartId);
 			const updated = await repository.setQuantity(cartId, productId, quantity);
 			if (!updated) {
 				throw new CartError("Product not found in cart", 404);
@@ -34,6 +36,7 @@ export class CartService {
 
 	async remove(cartId: string, productId: string) {
 		return this.cartRepository.transaction(async (repository) => {
+			await repository.lockCart(cartId);
 			await repository.remove(cartId, productId);
 			return this.getFromRepository(cartId, repository);
 		});

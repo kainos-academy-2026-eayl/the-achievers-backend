@@ -1,7 +1,7 @@
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 import { createApp } from "../src/app";
-import { noCart } from "./helpers";
+import { noCart, testJwtSecret } from "./helpers";
 
 describe("GET /health", () => {
 	it("returns a healthy response", async () => {
@@ -11,13 +11,18 @@ describe("GET /health", () => {
 					throw new Error("Registration was not expected in this test");
 				},
 			},
-			{ getAll: async () => [], getById: async () => null },
+			{
+				getAll: async () => [],
+				getById: async () => null,
+				delete: async () => false,
+			},
 			{
 				login: async () => {
 					throw new Error("Login was not expected in this test");
 				},
 			},
 			noCart,
+			testJwtSecret,
 		);
 
 		const response = await request(app).get("/health");

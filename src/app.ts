@@ -11,6 +11,11 @@ import {
 	createProductCreationRouter,
 	createProductsRouter,
 } from "./products/productController";
+import {
+	createAdminOrdersRouter,
+	createOrdersRouter,
+	type OrderApiService,
+} from "./orders/orderController";
 import type { ProductService } from "./products/productService";
 import { createProfileRouter } from "./profile/profileController";
 import type { ProfileService } from "./profile/profileService";
@@ -32,9 +37,10 @@ function getClientErrorStatus(error: unknown): number | undefined {
 
 export function createApp(
 	userService: Pick<UserService, "register">,
-	productService: Pick<ProductService, "getAll" | "getById">,
+	productService: Pick<ProductService, "getAll" | "getById" | "delete">,
 	loginService: Pick<LoginService, "login">,
 	cartService: CartApiService,
+	jwtSecret: string,
 	frontendOrigin = "http://localhost:8000",
 	profile?: {
 		service: Pick<ProfileService, "getProfile" | "updateProfile">;
@@ -42,6 +48,10 @@ export function createApp(
 	},
 	adminProducts?: {
 		service: Pick<ProductService, "create">;
+		jwtSecret: string;
+	},
+	orders?: {
+		service: OrderApiService;
 		jwtSecret: string;
 	},
 ): Express {
@@ -75,7 +85,10 @@ export function createApp(
 
 	const usersRouter = createUsersRouter(userService);
 	app.use("/api/register", usersRouter);
-	app.use("/api/products", createProductsRouter(productService));
+	app.use(
+		"/api/products",
+		createProductsRouter(productService, createRequireAdmin(jwtSecret)),
+	);
 	if (adminProducts) {
 		app.use(
 			"/api/products",
@@ -93,6 +106,19 @@ export function createApp(
 			createProfileRouter(
 				profile.service,
 				createRequireAuth(profile.jwtSecret),
+			),
+		);
+	}
+	if (orders) {
+		app.use(
+			"/api/orders",
+			createOrdersRouter(orders.service, createRequireAuth(orders.jwtSecret)),
+		);
+		app.use(
+			"/api/admin/orders",
+			createAdminOrdersRouter(
+				orders.service,
+				createRequireAdmin(orders.jwtSecret),
 			),
 		);
 	}

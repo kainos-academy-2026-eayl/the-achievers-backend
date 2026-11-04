@@ -108,8 +108,9 @@ least 32 bytes and fails at startup if the secret is missing or too short.
 Tokens use HS256, expire after one hour, and identify the user by their internal
 ID in `sub`. The issuer is `the-achievers-backend` and audience is
 `the-achievers-api`. Keep the secret stable across restarts and private to trusted
-servers. Product creation requires an admin token; catalogue reads and anonymous
-cart routes remain public. Protected routes verify signature, algorithm, issuer,
+servers. Product creation and deletion require admin tokens; catalogue reads,
+registration, login and anonymous cart routes remain public. Protected routes
+verify signature, algorithm, issuer,
 audience, and expiry before trusting a token. Use HTTPS and login rate limiting
 before public deployment.
 For an Express/Nunjucks frontend, keep the token in its server-side session rather
@@ -138,18 +139,37 @@ rounding fractional pounds. Invalid input returns `400` with
 `{"error":"Validation failed","fieldErrors":{"name":"Name is required"}}`.
 
 Success returns `201`, a `Location` header pointing to `/api/products/:id`, and
-the normal product response (including a numeric price in pounds). The server
-generates a UUID product ID; rating defaults to null and review count to zero.
-Clients cannot set IDs, ratings or review counts. Duplicate names are allowed.
+the normal product response (including the price in pounds, zero stock and
+`inStock: false`). The server generates a UUID product ID; rating defaults to
+null and review count to zero. Clients cannot set IDs, ratings, review counts or
+stock. Duplicate names are allowed.
 Database failures are logged and return a generic `500` response.
 
 Products persist through the existing Prisma repository and appear immediately
-in catalogue GET requests. Stock is not included in this feature, and no schema
-change or migration is needed. Application startup wires creation to the same
-JWT secret used for login; isolated apps may omit the optional admin-products
-dependency, in which case the creation route is not mounted.
+in catalogue GET requests. Creation does not accept a stock value; new products
+use the schema default of zero, with no schema change or migration needed for
+this endpoint. Application startup wires creation to the same JWT secret used
+for login; isolated apps may omit the optional admin-products dependency, in
+which case the creation route is not mounted.
 
 Run `npm test -- tests/productCreation.test.ts tests/products.test.ts tests/requireAdmin.test.ts`.
+
+## Admin product deletion
+
+`DELETE /api/products/:id` permanently deletes a product. Supply the login JWT
+in the `Authorization` header using the Bearer scheme. Only tokens with
+`role: "admin"` are accepted. Missing, invalid or expired tokens return `401`;
+authenticated non-admins receive `403`. Successful deletion returns `204` with no
+body; a missing product (including a repeated deletion) returns `404` with
+`{"error":"Product not found"}`. Unexpected failures are logged and return `500`
+without exposing database details. Public product GET routes are unchanged.
+
+Existing foreign keys cascade deletion to all cart items referencing that product.
+This is permanent, not a soft delete; no schema migration is required. Running
+the product seed again can recreate seeded products. Browser preflights from the
+configured frontend origin allow the `Authorization` header.
+
+Run `npm test -- tests/productDeletion.test.ts tests/products.test.ts tests/requireAdmin.test.ts`.
 These isolated tests require no running database.
 
 ## Local development
@@ -249,7 +269,7 @@ A new or empty cart returns HTTP `200` with
 `{"items":[],"estimatedShippingCost":0}`; the frontend uses this to display
 its empty-cart message.
 
-Quantities must be integers from `1` to `2147483647`, including the resulting
+Quantities must be integers from `1` to `99`, including the resulting
 quantity after adding units. Use DELETE, not quantity zero, to remove a product.
 Missing/invalid cart UUIDs, invalid quantities and malformed bodies return `400`.
 Unknown products and PATCH requests for items not in that cart return `404`.

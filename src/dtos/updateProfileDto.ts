@@ -46,7 +46,7 @@ function readText(
 	return value.trim();
 }
 
-function parseAddress(
+export function parseAddress(
 	value: unknown,
 	prefix: string,
 	allowLabel: boolean,

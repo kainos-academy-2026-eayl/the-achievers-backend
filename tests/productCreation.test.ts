@@ -24,6 +24,7 @@ const product = {
 	pricePence: 8999,
 	rating: null,
 	reviewCount: 0,
+	stock: 0,
 };
 
 async function token(
@@ -55,6 +56,7 @@ function setup() {
 		service,
 		{ login: vi.fn() },
 		noCart,
+		secret,
 		undefined,
 		undefined,
 		{ service, jwtSecret: secret },
@@ -99,6 +101,8 @@ describe("POST /api/products", () => {
 			price: 89.99,
 			rating: null,
 			reviewCount: 0,
+			stock: 0,
+			inStock: false,
 		});
 		expect(response.headers.location).toBe("/api/products/test-product");
 		expect(response.headers["cache-control"]).toBe("no-store");

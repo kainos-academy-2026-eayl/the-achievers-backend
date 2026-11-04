@@ -2,6 +2,8 @@ import "dotenv/config";
 import { createApp } from "./app";
 import { PrismaCartRepository } from "./cart/cartRepository";
 import { CartService } from "./cart/cartService";
+import { PrismaOrderRepository } from "./orders/orderRepository";
+import { OrderService } from "./orders/orderService";
 import { createPrismaClient } from "./prismaClient";
 import { PrismaProductRepository } from "./products/productRepository";
 import { ProductService } from "./products/productService";
@@ -40,6 +42,7 @@ const app = createApp(
 	productService,
 	loginService,
 	cartService,
+	process.env.JWT_SECRET,
 	process.env.FRONTEND_ORIGIN ?? "http://localhost:8000",
 	{
 		service: new ProfileService(new PrismaProfileRepository(prisma)),
@@ -47,6 +50,10 @@ const app = createApp(
 	},
 	{
 		service: productService,
+		jwtSecret: process.env.JWT_SECRET,
+	},
+	{
+		service: new OrderService(new PrismaOrderRepository(prisma)),
 		jwtSecret: process.env.JWT_SECRET,
 	},
 );

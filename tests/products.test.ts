@@ -1,11 +1,12 @@
 import request from "supertest";
 import { describe, expect, it, vi } from "vitest";
 import { createApp } from "../src/app";
-import { noCart } from "./helpers";
+import { noCart, testJwtSecret } from "./helpers";
 
 const noRegistration = { register: vi.fn() };
 const noLogin = { login: vi.fn() };
 const getById = vi.fn();
+const deleteProduct = vi.fn();
 
 describe("GET /api/products", () => {
 	it("returns all products with prices as numbers", async () => {
@@ -18,6 +19,7 @@ describe("GET /api/products", () => {
 				pricePence: 149999,
 				rating: 4.8,
 				reviewCount: 312,
+				stock: 25,
 			},
 			{
 				id: "laser-training-aid",
@@ -27,9 +29,16 @@ describe("GET /api/products", () => {
 				pricePence: null,
 				rating: null,
 				reviewCount: 0,
+				stock: 0,
 			},
 		]);
-		const app = createApp(noRegistration, { getAll, getById }, noLogin, noCart);
+		const app = createApp(
+			noRegistration,
+			{ getAll, getById, delete: deleteProduct },
+			noLogin,
+			noCart,
+			testJwtSecret,
+		);
 
 		const response = await request(app).get("/api/products");
 
@@ -43,6 +52,8 @@ describe("GET /api/products", () => {
 				price: 1499.99,
 				rating: 4.8,
 				reviewCount: 312,
+				stock: 25,
+				inStock: true,
 			},
 			{
 				id: "laser-training-aid",
@@ -52,6 +63,8 @@ describe("GET /api/products", () => {
 				price: null,
 				rating: null,
 				reviewCount: 0,
+				stock: 0,
+				inStock: false,
 			},
 		]);
 	});
@@ -59,9 +72,10 @@ describe("GET /api/products", () => {
 	it("returns an empty list when there are no products", async () => {
 		const app = createApp(
 			noRegistration,
-			{ getAll: async () => [], getById },
+			{ getAll: async () => [], getById, delete: deleteProduct },
 			noLogin,
 			noCart,
+			testJwtSecret,
 		);
 
 		const response = await request(app).get("/api/products");
@@ -73,7 +87,13 @@ describe("GET /api/products", () => {
 	it("returns a 500 without leaking details when the database fails", async () => {
 		vi.spyOn(console, "error").mockImplementation(() => {});
 		const getAll = vi.fn().mockRejectedValue(new Error("connection refused"));
-		const app = createApp(noRegistration, { getAll, getById }, noLogin, noCart);
+		const app = createApp(
+			noRegistration,
+			{ getAll, getById, delete: deleteProduct },
+			noLogin,
+			noCart,
+			testJwtSecret,
+		);
 
 		const response = await request(app).get("/api/products");
 
@@ -94,8 +114,15 @@ describe("GET /api/products/:id", () => {
 			pricePence: 149999,
 			rating: 4.8,
 			reviewCount: 312,
+			stock: 25,
 		});
-		const app = createApp(noRegistration, { getAll, getById }, noLogin, noCart);
+		const app = createApp(
+			noRegistration,
+			{ getAll, getById, delete: deleteProduct },
+			noLogin,
+			noCart,
+			testJwtSecret,
+		);
 
 		const response = await request(app).get("/api/products/calluminator");
 
@@ -109,12 +136,20 @@ describe("GET /api/products/:id", () => {
 			price: 1499.99,
 			rating: 4.8,
 			reviewCount: 312,
+			stock: 25,
+			inStock: true,
 		});
 	});
 
 	it("returns a 404 when the product does not exist", async () => {
 		const getById = vi.fn().mockResolvedValue(null);
-		const app = createApp(noRegistration, { getAll, getById }, noLogin, noCart);
+		const app = createApp(
+			noRegistration,
+			{ getAll, getById, delete: deleteProduct },
+			noLogin,
+			noCart,
+			testJwtSecret,
+		);
 
 		const response = await request(app).get("/api/products/does-not-exist");
 
@@ -125,7 +160,13 @@ describe("GET /api/products/:id", () => {
 	it("returns a 500 without leaking details when the database fails", async () => {
 		vi.spyOn(console, "error").mockImplementation(() => {});
 		const getById = vi.fn().mockRejectedValue(new Error("connection refused"));
-		const app = createApp(noRegistration, { getAll, getById }, noLogin, noCart);
+		const app = createApp(
+			noRegistration,
+			{ getAll, getById, delete: deleteProduct },
+			noLogin,
+			noCart,
+			testJwtSecret,
+		);
 
 		const response = await request(app).get("/api/products/calluminator");
 
