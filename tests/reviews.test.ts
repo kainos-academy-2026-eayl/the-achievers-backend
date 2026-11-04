@@ -17,6 +17,7 @@ const productIds = {
 	cue: `${fixturePrefix}-cue`,
 	chalk: `${fixturePrefix}-chalk`,
 	rated: `${fixturePrefix}-rated`,
+	deletedOrder: `${fixturePrefix}-deleted-order`,
 };
 const EIGHT_DAYS_AGO = () => new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
 
@@ -216,6 +217,24 @@ describeWithDatabase("reviews API with PostgreSQL", () => {
 		expect(await productRating(productIds.rated)).toEqual({
 			rating: 4.3,
 			reviewCount: 3,
+		});
+	});
+
+	it("recalculates the product rating when an order deletion cascades its review", async () => {
+		const customer = await createUser();
+		const orderId = await createOrder(customer.id, {
+			products: [productIds.deletedOrder],
+		});
+		await saveReview(customer.auth, productIds.deletedOrder, {
+			orderId,
+			rating: 5,
+		}).expect(201);
+
+		await prisma.order.delete({ where: { id: orderId } });
+
+		expect(await productRating(productIds.deletedOrder)).toEqual({
+			rating: null,
+			reviewCount: 0,
 		});
 	});
 
