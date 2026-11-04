@@ -9,6 +9,8 @@ import { PrismaProductRepository } from "./products/productRepository";
 import { ProductService } from "./products/productService";
 import { PrismaProfileRepository } from "./profile/profileRepository";
 import { ProfileService } from "./profile/profileService";
+import { PrismaResetPassRepository } from "./resetPass/resetPassRepository";
+import { ResetPassService } from "./resetPass/resetPassService";
 import { PrismaSafeWordHintRepository } from "./safeWordHint/safeWordHintRepository";
 import { SafeWordHintService } from "./safeWordHint/safeWordHintService";
 import { PrismaLoginRepository } from "./userLogin/loginRepository";
@@ -55,6 +57,7 @@ const app = createApp(
 		jwtSecret: process.env.JWT_SECRET,
 	},
 	new SafeWordHintService(new PrismaSafeWordHintRepository(prisma)),
+	new ResetPassService(new PrismaResetPassRepository(prisma)),
 );
 
 // Keep everything below this comment at the bottom of the file

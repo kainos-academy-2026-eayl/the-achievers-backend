@@ -17,6 +17,8 @@ import type { ProductService } from "./products/productService";
 import { createProfileRouter } from "./profile/profileController";
 import type { ProfileService } from "./profile/profileService";
 import { createRateLimiter } from "./rateLimit";
+import { createResetPassRouter } from "./resetPass/resetPassController";
+import type { ResetPassService } from "./resetPass/resetPassService";
 import { createSafeWordHintRouter } from "./safeWordHint/safeWordHintController";
 import type { SafeWordHintService } from "./safeWordHint/safeWordHintService";
 import { createLoginRouter } from "./userLogin/loginController";
@@ -51,6 +53,7 @@ export function createApp(
 		jwtSecret: string;
 	},
 	safeWordHintService?: Pick<SafeWordHintService, "getSafeWordHint">,
+	resetPassService?: Pick<ResetPassService, "verifySafeWord" | "resetPassword">,
 ): Express {
 	const app = express();
 
@@ -116,6 +119,24 @@ export function createApp(
 			"/api/safe-word-hint",
 			createRateLimiter({ limit: 5, windowMs: 60_000 }),
 			createSafeWordHintRouter(safeWordHintService),
+		);
+	}
+	if (resetPassService) {
+		// Safe words are guessable, so count attempts per email rather than per IP
+		// (every request reaches this API from the frontend server).
+		app.use(
+			"/api/reset-password",
+			createRateLimiter({
+				limit: 5,
+				windowMs: 15 * 60_000,
+				keyFor: (req) => {
+					const email = req.body?.email;
+					return typeof email === "string"
+						? `email:${email.trim().toLowerCase()}`
+						: undefined;
+				},
+			}),
+			createResetPassRouter(resetPassService),
 		);
 	}
 

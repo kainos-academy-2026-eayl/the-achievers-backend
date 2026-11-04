@@ -115,6 +115,22 @@ login rate limiting before public deployment.
 For an Express/Nunjucks frontend, keep the token in its server-side session rather
 than exposing it to browser scripts.
 
+## Password reset
+
+Two endpoints reset a password using the safe word chosen at registration. Both
+accept JSON with `email` and `safeWord` (non-blank, at most 128 characters):
+
+- `POST /api/reset-password/verify` checks the email and safe word.
+- `POST /api/reset-password` checks them again and also needs `newPassword`
+  (12 to 128 characters); it stores a new Argon2id hash.
+
+Success returns `204` with no body. Invalid input returns `400`. An unknown
+email, a wrong safe word, or a user with no safe word all return the same `401`
+`{"error":"Invalid email or safe word"}`, and unknown emails still run a hash
+comparison to keep timing similar. Attempts are limited to 5 per email per
+15 minutes (`429` with `Retry-After`). Responses are `Cache-Control: no-store`.
+Existing sessions and tokens are not revoked by a reset.
+
 ## Admin product deletion
 
 `DELETE /api/products/:id` permanently deletes a product. Supply the login JWT
