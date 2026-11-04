@@ -9,6 +9,7 @@ import { calculateShippingCostPence } from "../shipping";
 import type { OrderRepository } from "./orderRepository";
 
 const MAX_DB_INT = 2_147_483_647n;
+const DELIVERY_DELAY_MS = 5 * 60 * 1000;
 const REFERENCE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 function generateReference(): string {
@@ -76,6 +77,11 @@ export class OrderService {
 			return created;
 		});
 		return toOrderResponseDto(order);
+	}
+
+	markDueOrdersDelivered(now = new Date()): Promise<number> {
+		const createdBefore = new Date(now.getTime() - DELIVERY_DELAY_MS);
+		return this.orderRepository.markPlacedOrdersDelivered(createdBefore);
 	}
 
 	async listForUser(userId: number) {

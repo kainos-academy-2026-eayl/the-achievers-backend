@@ -4,7 +4,6 @@ import {
 	toReviewResponseDto,
 } from "../dtos/reviewDto";
 import { ReviewError } from "../errors/reviewError";
-import { displayStatus } from "../mappers/orderMapper";
 import type { ReviewRepository } from "./reviewRepository";
 
 export class ReviewService {
@@ -28,7 +27,7 @@ export class ReviewService {
 			if (!(await repository.lockProduct(productId))) {
 				throw new ReviewError("Product not found", 404);
 			}
-			if (displayStatus(order) !== "delivered") {
+			if (order.status !== "delivered") {
 				throw new ReviewError(
 					"Reviews are only available for delivered orders",
 					403,

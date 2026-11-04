@@ -4,6 +4,7 @@ import { PrismaCartRepository } from "./cart/cartRepository";
 import { CartService } from "./cart/cartService";
 import { PrismaOrderRepository } from "./orders/orderRepository";
 import { OrderService } from "./orders/orderService";
+import { startOrderStatusWorker } from "./orders/orderStatusWorker";
 import { createPrismaClient } from "./prismaClient";
 import { PrismaProductRepository } from "./products/productRepository";
 import { ProductService } from "./products/productService";
@@ -39,6 +40,7 @@ const cartService = new CartService(
 	new PrismaCartRepository(prisma),
 	productRepository,
 );
+const orderService = new OrderService(new PrismaOrderRepository(prisma));
 const app = createApp(
 	userService,
 	productService,
@@ -55,7 +57,7 @@ const app = createApp(
 		jwtSecret: process.env.JWT_SECRET,
 	},
 	{
-		service: new OrderService(new PrismaOrderRepository(prisma)),
+		service: orderService,
 		jwtSecret: process.env.JWT_SECRET,
 	},
 	{
@@ -63,6 +65,7 @@ const app = createApp(
 		jwtSecret: process.env.JWT_SECRET,
 	},
 );
+const stopOrderStatusWorker = startOrderStatusWorker(orderService);
 
 // Keep everything below this comment at the bottom of the file
 const server = app.listen(PORT, HOST, () => {
@@ -71,6 +74,7 @@ const server = app.listen(PORT, HOST, () => {
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
 	process.on(signal, () => {
+		stopOrderStatusWorker();
 		server.close(() => {
 			void prisma
 				.$disconnect()
