@@ -108,10 +108,11 @@ least 32 bytes and fails at startup if the secret is missing or too short.
 Tokens use HS256, expire after one hour, and identify the user by their internal
 ID in `sub`. The issuer is `the-achievers-backend` and audience is
 `the-achievers-api`. Keep the secret stable across restarts and private to trusted
-servers. Product deletion requires an admin token; catalogue reads, registration,
-login and anonymous cart routes remain public. Protected routes verify signature,
-algorithm, issuer, audience, and expiry before trusting a token. Use HTTPS and
-login rate limiting before public deployment.
+servers. Product creation and deletion require admin tokens; catalogue reads,
+registration, login and anonymous cart routes remain public. Protected routes
+verify signature, algorithm, issuer,
+audience, and expiry before trusting a token. Use HTTPS and login rate limiting
+before public deployment.
 For an Express/Nunjucks frontend, keep the token in its server-side session rather
 than exposing it to browser scripts.
 

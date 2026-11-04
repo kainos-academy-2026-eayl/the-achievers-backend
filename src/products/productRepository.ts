@@ -1,8 +1,10 @@
+import type { CreateProductDto } from "../dtos/createProductDto";
 import type { PrismaClient, Product } from "../generated/prisma/client";
 
 export interface ProductRepository {
 	findAll(): Promise<Product[]>;
 	findById(id: string): Promise<Product | null>;
+	create(data: CreateProductDto & { id: string }): Promise<Product>;
 	delete(id: string): Promise<boolean>;
 }
 
@@ -15,6 +17,10 @@ export class PrismaProductRepository implements ProductRepository {
 
 	findById(id: string): Promise<Product | null> {
 		return this.prisma.product.findUnique({ where: { id } });
+	}
+
+	create(data: CreateProductDto & { id: string }): Promise<Product> {
+		return this.prisma.product.create({ data });
 	}
 
 	async delete(id: string): Promise<boolean> {

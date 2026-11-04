@@ -4,3 +4,4 @@ dist/
 /src/generated/prisma
 .DS_Store
 code_reviews/
+.env.test

@@ -40,6 +40,7 @@ describeWithDatabase("orders API with PostgreSQL", () => {
 		jwtSecret,
 		undefined,
 		undefined,
+		undefined,
 		{
 			service: new OrderService(new PrismaOrderRepository(prisma)),
 			jwtSecret,
@@ -329,5 +330,31 @@ describeWithDatabase("orders API with PostgreSQL", () => {
 			},
 		});
 		expect(badPage.status).toBe(400);
+	});
+
+	it("shows orders as delivered once they are 7 days old", async () => {
+		const customer = await createUser();
+		const old = await checkout(
+			customer.auth,
+			await cartWith({ [productIds.chalk]: 1 }),
+		);
+		const recent = await checkout(
+			customer.auth,
+			await cartWith({ [productIds.chalk]: 1 }),
+		);
+		await prisma.order.update({
+			where: { id: old.body.id },
+			data: { createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+		});
+
+		const statusOf = async (id: string) =>
+			(
+				await request(app)
+					.get(`/api/orders/${id}`)
+					.set("Authorization", customer.auth)
+					.expect(200)
+			).body.status;
+		expect(await statusOf(old.body.id)).toBe("delivered");
+		expect(await statusOf(recent.body.id)).toBe("placed");
 	});
 });

@@ -8,11 +8,14 @@ import { createRequireAdmin } from "./auth/requireAdmin";
 import { createRequireAuth } from "./auth/requireAuth";
 import { type CartApiService, createCartRouter } from "./cart/cartController";
 import {
+	createProductCreationRouter,
+	createProductsRouter,
+} from "./products/productController";
+import {
 	createAdminOrdersRouter,
 	createOrdersRouter,
 	type OrderApiService,
 } from "./orders/orderController";
-import { createProductsRouter } from "./products/productController";
 import type { ProductService } from "./products/productService";
 import { createProfileRouter } from "./profile/profileController";
 import type { ProfileService } from "./profile/profileService";
@@ -48,6 +51,10 @@ export function createApp(
 		service: Pick<ProfileService, "getProfile" | "updateProfile">;
 		jwtSecret: string;
 	},
+	adminProducts?: {
+		service: Pick<ProductService, "create">;
+		jwtSecret: string;
+	},
 	orders?: {
 		service: OrderApiService;
 		jwtSecret: string;
@@ -64,7 +71,7 @@ export function createApp(
 			if (req.method === "OPTIONS") {
 				res.set(
 					"Access-Control-Allow-Methods",
-					"GET, POST, PATCH, DELETE, OPTIONS",
+					"GET, POST, PUT, PATCH, DELETE, OPTIONS",
 				);
 				res.set(
 					"Access-Control-Allow-Headers",
@@ -89,6 +96,15 @@ export function createApp(
 		"/api/products",
 		createProductsRouter(productService, createRequireAdmin(jwtSecret)),
 	);
+	if (adminProducts) {
+		app.use(
+			"/api/products",
+			createProductCreationRouter(
+				adminProducts.service,
+				createRequireAdmin(adminProducts.jwtSecret),
+			),
+		);
+	}
 	app.use("/api/login", createLoginRouter(loginService));
 	app.use("/api/cart", createCartRouter(cartService));
 	if (profile) {
