@@ -26,10 +26,10 @@ export interface OrderResponseDto {
 }
 
 export interface AdminOrderResponseDto extends OrderResponseDto {
-	customer: { id: number; email: string; name: string };
+	customer: { id: number; email: string; name: string; };
 }
 
-const DELIVERY_TIME_MS = 7 * 24 * 60 * 60 * 1000;
+const DELIVERY_TIME_MS = 5 * 60 * 1000;
 
 export function displayStatus(
 	order: Pick<OrderWithItems, "status" | "createdAt">,
