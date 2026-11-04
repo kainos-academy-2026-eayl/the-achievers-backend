@@ -32,6 +32,7 @@ describeWithDatabase("orders API with PostgreSQL", () => {
 
 	const prisma = createPrismaClient();
 	const productRepository = new PrismaProductRepository(prisma);
+	const orderService = new OrderService(new PrismaOrderRepository(prisma));
 	const app = createApp(
 		noRegistration,
 		new ProductService(productRepository),
@@ -42,7 +43,7 @@ describeWithDatabase("orders API with PostgreSQL", () => {
 		undefined,
 		undefined,
 		{
-			service: new OrderService(new PrismaOrderRepository(prisma)),
+			service: orderService,
 			jwtSecret,
 		},
 	);
@@ -332,7 +333,7 @@ describeWithDatabase("orders API with PostgreSQL", () => {
 		expect(badPage.status).toBe(400);
 	});
 
-	it("shows orders as delivered once they are 7 days old", async () => {
+	it("persists delivered status for orders at least 5 minutes old", async () => {
 		const customer = await createUser();
 		const old = await checkout(
 			customer.auth,
@@ -344,8 +345,28 @@ describeWithDatabase("orders API with PostgreSQL", () => {
 		);
 		await prisma.order.update({
 			where: { id: old.body.id },
-			data: { createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+			data: { createdAt: new Date(Date.now() - 6 * 60 * 1000) },
 		});
+		await prisma.order.update({
+			where: { id: recent.body.id },
+			data: { createdAt: new Date(Date.now() - 4 * 60 * 1000) },
+		});
+		expect(await orderService.markDueOrdersDelivered()).toBeGreaterThanOrEqual(
+			1,
+		);
+
+		const [oldStored, recentStored] = await Promise.all([
+			prisma.order.findUniqueOrThrow({
+				where: { id: old.body.id },
+				select: { status: true },
+			}),
+			prisma.order.findUniqueOrThrow({
+				where: { id: recent.body.id },
+				select: { status: true },
+			}),
+		]);
+		expect(oldStored.status).toBe("delivered");
+		expect(recentStored.status).toBe("placed");
 
 		const statusOf = async (id: string) =>
 			(
