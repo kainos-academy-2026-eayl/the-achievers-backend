@@ -10,8 +10,12 @@ import { PrismaProductRepository } from "./products/productRepository";
 import { ProductService } from "./products/productService";
 import { PrismaProfileRepository } from "./profile/profileRepository";
 import { ProfileService } from "./profile/profileService";
+import { PrismaResetPassRepository } from "./resetPass/resetPassRepository";
+import { ResetPassService } from "./resetPass/resetPassService";
 import { PrismaReviewRepository } from "./reviews/reviewRepository";
 import { ReviewService } from "./reviews/reviewService";
+import { PrismaSafeWordHintRepository } from "./safeWordHint/safeWordHintRepository";
+import { SafeWordHintService } from "./safeWordHint/safeWordHintService";
 import { PrismaLoginRepository } from "./userLogin/loginRepository";
 import { LoginService } from "./userLogin/loginService";
 import { PrismaUserRepository } from "./userRegistration/userRepository";
@@ -60,6 +64,8 @@ const app = createApp(
 		service: orderService,
 		jwtSecret: process.env.JWT_SECRET,
 	},
+	new SafeWordHintService(new PrismaSafeWordHintRepository(prisma)),
+	new ResetPassService(new PrismaResetPassRepository(prisma)),
 	{
 		service: new ReviewService(new PrismaReviewRepository(prisma)),
 		jwtSecret: process.env.JWT_SECRET,

@@ -20,10 +20,15 @@ import {
 import type { ProductService } from "./products/productService";
 import { createProfileRouter } from "./profile/profileController";
 import type { ProfileService } from "./profile/profileService";
+import { createRateLimiter } from "./rateLimit";
+import { createResetPassRouter } from "./resetPass/resetPassController";
+import type { ResetPassService } from "./resetPass/resetPassService";
 import {
 	createReviewsRouter,
 	type ReviewApiService,
 } from "./reviews/reviewController";
+import { createSafeWordHintRouter } from "./safeWordHint/safeWordHintController";
+import type { SafeWordHintService } from "./safeWordHint/safeWordHintService";
 import { createLoginRouter } from "./userLogin/loginController";
 import type { LoginService } from "./userLogin/loginService";
 import { createUsersRouter } from "./userRegistration/userController";
@@ -59,6 +64,8 @@ export function createApp(
 		service: OrderApiService;
 		jwtSecret: string;
 	},
+	safeWordHintService?: Pick<SafeWordHintService, "getSafeWordHint">,
+	resetPassService?: Pick<ResetPassService, "verifySafeWord" | "resetPassword">,
 	reviews?: {
 		service: ReviewApiService;
 		jwtSecret: string;
@@ -138,6 +145,14 @@ export function createApp(
 			),
 		);
 	}
+	if (safeWordHintService) {
+		// The hint response reveals whether an email has an account.
+		app.use(
+			"/api/safe-word-hint",
+			createRateLimiter({ limit: 5, windowMs: 60_000 }),
+			createSafeWordHintRouter(safeWordHintService),
+		);
+	}
 	if (reviews) {
 		app.use(
 			"/api/reviews",
@@ -145,6 +160,24 @@ export function createApp(
 				reviews.service,
 				createRequireAuth(reviews.jwtSecret),
 			),
+		);
+	}
+	if (resetPassService) {
+		// Safe words are guessable, so count attempts per email rather than per IP
+		// (every request reaches this API from the frontend server).
+		app.use(
+			"/api/reset-password",
+			createRateLimiter({
+				limit: 5,
+				windowMs: 15 * 60_000,
+				keyFor: (req) => {
+					const email = req.body?.email;
+					return typeof email === "string"
+						? `email:${email.trim().toLowerCase()}`
+						: undefined;
+				},
+			}),
+			createResetPassRouter(resetPassService),
 		);
 	}
 

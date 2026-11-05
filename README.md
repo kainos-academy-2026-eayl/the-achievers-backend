@@ -116,43 +116,21 @@ before public deployment.
 For an Express/Nunjucks frontend, keep the token in its server-side session rather
 than exposing it to browser scripts.
 
-## Admin product creation (KAN-36)
+## Password reset
 
-`POST /api/products` creates a catalogue product. Send the login JWT in the
-`Authorization` header using the Bearer scheme. Only admin tokens are accepted:
-missing, invalid or expired credentials return `401`, and non-admins receive `403`.
+Two endpoints reset a password using the safe word chosen at registration. Both
+accept JSON with `email` and `safeWord` (non-blank, at most 128 characters):
 
-```json
-{
-  "name": "Maple Cue",
-  "description": "A balanced maple cue.",
-  "category": "Cues",
-  "price": "89.99"
-}
-```
+- `POST /api/reset-password/verify` checks the email and safe word.
+- `POST /api/reset-password` checks them again and also needs `newPassword`
+  (12 to 128 characters); it stores a new Argon2id hash.
 
-Name, description and category are required, trimmed strings, limited to 200,
-2000 and 100 characters respectively. Category is free text. Price is required
-in pounds as a decimal string or JSON number, from `0` to `21474836.47`, with at
-most two decimal places. Decimal digits are converted to integer pence without
-rounding fractional pounds. Invalid input returns `400` with
-`{"error":"Validation failed","fieldErrors":{"name":"Name is required"}}`.
-
-Success returns `201`, a `Location` header pointing to `/api/products/:id`, and
-the normal product response (including the price in pounds, zero stock and
-`inStock: false`). The server generates a UUID product ID; rating defaults to
-null and review count to zero. Clients cannot set IDs, ratings, review counts or
-stock. Duplicate names are allowed.
-Database failures are logged and return a generic `500` response.
-
-Products persist through the existing Prisma repository and appear immediately
-in catalogue GET requests. Creation does not accept a stock value; new products
-use the schema default of zero, with no schema change or migration needed for
-this endpoint. Application startup wires creation to the same JWT secret used
-for login; isolated apps may omit the optional admin-products dependency, in
-which case the creation route is not mounted.
-
-Run `npm test -- tests/productCreation.test.ts tests/products.test.ts tests/requireAdmin.test.ts`.
+Success returns `204` with no body. Invalid input returns `400`. An unknown
+email, a wrong safe word, or a user with no safe word all return the same `401`
+`{"error":"Invalid email or safe word"}`, and unknown emails still run a hash
+comparison to keep timing similar. Attempts are limited to 5 per email per
+15 minutes (`429` with `Retry-After`). Responses are `Cache-Control: no-store`.
+Existing sessions and tokens are not revoked by a reset.
 
 ## Admin product updates
 
