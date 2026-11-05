@@ -1,6 +1,8 @@
 import {
+	type ProductReviewResponseDto,
 	type ReviewResponseDto,
 	type SaveReviewDto,
+	toProductReviewResponseDto,
 	toReviewResponseDto,
 } from "../dtos/reviewDto";
 import { ReviewError } from "../errors/reviewError";
@@ -12,6 +14,11 @@ export class ReviewService {
 	async listForUser(userId: number): Promise<ReviewResponseDto[]> {
 		const reviews = await this.reviewRepository.findByUser(userId);
 		return reviews.map(toReviewResponseDto);
+	}
+
+	async listForProduct(productId: string): Promise<ProductReviewResponseDto[]> {
+		const reviews = await this.reviewRepository.findByProduct(productId);
+		return reviews.map(toProductReviewResponseDto);
 	}
 
 	async saveForUser(

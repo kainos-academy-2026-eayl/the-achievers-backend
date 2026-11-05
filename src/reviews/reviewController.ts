@@ -11,7 +11,7 @@ import type { ReviewService } from "./reviewService";
 
 export type ReviewApiService = Pick<
 	ReviewService,
-	"listForUser" | "saveForUser"
+	"listForUser" | "listForProduct" | "saveForUser"
 >;
 
 function noStore(_req: Request, res: Response, next: NextFunction) {
@@ -37,11 +37,18 @@ export function createReviewsRouter(
 	requireAuth: RequestHandler,
 ): Router {
 	const router = Router();
-	router.use(noStore, requireAuth);
+	router.use(noStore);
 
-	router.get("/me", async (_req, res) => {
+	router.get("/me", requireAuth, async (_req, res) => {
 		res.json(await reviewService.listForUser(res.locals.userId));
 	});
+
+	router.get("/:productId", async (req, res) => {
+		const productId = parseProductId(req.params.productId);
+		res.json(await reviewService.listForProduct(productId));
+	});
+
+	router.use(requireAuth);
 
 	router.put("/:productId", async (req, res) => {
 		const productId = parseProductId(req.params.productId);

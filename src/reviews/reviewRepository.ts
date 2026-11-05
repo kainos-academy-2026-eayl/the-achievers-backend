@@ -1,6 +1,9 @@
 import type { PrismaClient, Prisma } from "../generated/prisma/client";
 
 export type ReviewRecord = Prisma.ReviewGetPayload<object>;
+export type ProductReviewRecord = Prisma.ReviewGetPayload<{
+	include: { user: { select: { name: true } } };
+}>;
 
 export interface ReviewableOrder {
 	status: string;
@@ -13,6 +16,7 @@ export interface ReviewRepository {
 		work: (repository: ReviewRepository) => Promise<T>,
 	): Promise<T>;
 	findByUser(userId: number): Promise<ReviewRecord[]>;
+	findByProduct(productId: string): Promise<ProductReviewRecord[]>;
 	findOrderForUser(
 		orderId: string,
 		userId: number,
@@ -52,6 +56,14 @@ export class PrismaReviewRepository implements ReviewRepository {
 		return this.prisma.review.findMany({
 			where: { userId },
 			orderBy: { updatedAt: "desc" },
+		});
+	}
+
+	findByProduct(productId: string): Promise<ProductReviewRecord[]> {
+		return this.prisma.review.findMany({
+			where: { productId },
+			orderBy: { createdAt: "desc" },
+			include: { user: { select: { name: true } } },
 		});
 	}
 
