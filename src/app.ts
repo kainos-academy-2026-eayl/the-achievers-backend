@@ -9,6 +9,7 @@ import { createRequireAuth } from "./auth/requireAuth";
 import { type CartApiService, createCartRouter } from "./cart/cartController";
 import {
 	createProductCreationRouter,
+	createProductUpdateRouter,
 	createProductsRouter,
 } from "./products/productController";
 import {
@@ -51,7 +52,7 @@ export function createApp(
 		jwtSecret: string;
 	},
 	adminProducts?: {
-		service: Pick<ProductService, "create">;
+		service: Pick<ProductService, "create" | "update" | "getById">;
 		jwtSecret: string;
 	},
 	orders?: {
@@ -101,6 +102,13 @@ export function createApp(
 		app.use(
 			"/api/products",
 			createProductCreationRouter(
+				adminProducts.service,
+				createRequireAdmin(adminProducts.jwtSecret),
+			),
+		);
+		app.use(
+			"/api/products",
+			createProductUpdateRouter(
 				adminProducts.service,
 				createRequireAdmin(adminProducts.jwtSecret),
 			),
