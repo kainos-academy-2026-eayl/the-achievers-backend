@@ -149,6 +149,8 @@ function setup() {
 		undefined,
 		undefined,
 		undefined,
+		undefined,
+		undefined,
 		{ service: fakes.service, jwtSecret: secret },
 	);
 	return { app, ...fakes };
