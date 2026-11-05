@@ -25,6 +25,7 @@ const product = {
 	rating: null,
 	reviewCount: 0,
 	stock: 0,
+	images: [],
 };
 
 async function token(
@@ -94,6 +95,7 @@ describe("POST /api/products", () => {
 				category: input.category,
 				pricePence: 8999,
 			},
+			include: { images: { orderBy: { position: "asc" } } },
 		});
 		expect(response.body).toEqual({
 			id: product.id,
@@ -103,6 +105,7 @@ describe("POST /api/products", () => {
 			reviewCount: 0,
 			stock: 0,
 			inStock: false,
+			images: [],
 		});
 		expect(response.headers.location).toBe("/api/products/test-product");
 		expect(response.headers["cache-control"]).toBe("no-store");

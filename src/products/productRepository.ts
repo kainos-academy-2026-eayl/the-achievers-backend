@@ -1,34 +1,57 @@
 import type { CreateProductDto } from "../dtos/createProductDto";
 import type { UpdateProductDto } from "../dtos/updateProductDto";
-import type { PrismaClient, Product } from "../generated/prisma/client";
+import type {
+	PrismaClient,
+	Product,
+	ProductImage,
+} from "../generated/prisma/client";
 import { Prisma } from "../generated/prisma/client";
 
+export type ProductWithImages = Product & { images: ProductImage[] };
+
+const includeImages = {
+	images: { orderBy: { position: "asc" } },
+} as const;
+
 export interface ProductRepository {
-	findAll(): Promise<Product[]>;
-	findById(id: string): Promise<Product | null>;
-	create(data: CreateProductDto & { id: string }): Promise<Product>;
-	update(id: string, data: UpdateProductDto): Promise<Product | null>;
+	findAll(): Promise<ProductWithImages[]>;
+	findById(id: string): Promise<ProductWithImages | null>;
+	create(data: CreateProductDto & { id: string }): Promise<ProductWithImages>;
+	update(id: string, data: UpdateProductDto): Promise<ProductWithImages | null>;
 	delete(id: string): Promise<boolean>;
 }
 
 export class PrismaProductRepository implements ProductRepository {
 	constructor(private readonly prisma: PrismaClient) {}
 
-	findAll(): Promise<Product[]> {
-		return this.prisma.product.findMany({ orderBy: { name: "asc" } });
+	findAll(): Promise<ProductWithImages[]> {
+		return this.prisma.product.findMany({
+			orderBy: { name: "asc" },
+			include: includeImages,
+		});
 	}
 
-	findById(id: string): Promise<Product | null> {
-		return this.prisma.product.findUnique({ where: { id } });
+	findById(id: string): Promise<ProductWithImages | null> {
+		return this.prisma.product.findUnique({
+			where: { id },
+			include: includeImages,
+		});
 	}
 
-	create(data: CreateProductDto & { id: string }): Promise<Product> {
-		return this.prisma.product.create({ data });
+	create(data: CreateProductDto & { id: string }): Promise<ProductWithImages> {
+		return this.prisma.product.create({ data, include: includeImages });
 	}
 
-	async update(id: string, data: UpdateProductDto): Promise<Product | null> {
+	async update(
+		id: string,
+		data: UpdateProductDto,
+	): Promise<ProductWithImages | null> {
 		try {
-			return await this.prisma.product.update({ where: { id }, data });
+			return await this.prisma.product.update({
+				where: { id },
+				data,
+				include: includeImages,
+			});
 		} catch (error) {
 			if (
 				error instanceof Prisma.PrismaClientKnownRequestError &&

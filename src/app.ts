@@ -12,6 +12,8 @@ import {
 	createProductUpdateRouter,
 	createProductsRouter,
 } from "./products/productController";
+import { createProductImagesRouter } from "./products/productImageController";
+import type { ProductImageService } from "./products/productImageService";
 import {
 	createAdminOrdersRouter,
 	createOrdersRouter,
@@ -63,6 +65,10 @@ export function createApp(
 		service: ReviewApiService;
 		jwtSecret: string;
 	},
+	productImages?: {
+		service: Pick<ProductImageService, "add" | "replace" | "remove" | "read">;
+		jwtSecret: string;
+	},
 ): Express {
 	const app = express();
 
@@ -111,6 +117,15 @@ export function createApp(
 			createProductUpdateRouter(
 				adminProducts.service,
 				createRequireAdmin(adminProducts.jwtSecret),
+			),
+		);
+	}
+	if (productImages) {
+		app.use(
+			"/api/products",
+			createProductImagesRouter(
+				productImages.service,
+				createRequireAdmin(productImages.jwtSecret),
 			),
 		);
 	}

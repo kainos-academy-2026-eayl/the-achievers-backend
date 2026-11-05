@@ -26,6 +26,7 @@ const product = {
 	stock: 25,
 	rating: null,
 	reviewCount: 0,
+	images: [],
 };
 
 async function auth(
@@ -95,6 +96,7 @@ describe("PUT /api/products/:id", () => {
 				pricePence: 7999,
 				stock: 25,
 			},
+			include: { images: { orderBy: { position: "asc" } } },
 		});
 		expect(response.body).toEqual({
 			id: product.id,
@@ -106,6 +108,7 @@ describe("PUT /api/products/:id", () => {
 			inStock: true,
 			rating: null,
 			reviewCount: 0,
+			images: [],
 		});
 		expect(response.headers["cache-control"]).toBe("no-store");
 	});

@@ -8,6 +8,9 @@ import { startOrderStatusWorker } from "./orders/orderStatusWorker";
 import { createPrismaClient } from "./prismaClient";
 import { PrismaProductRepository } from "./products/productRepository";
 import { ProductService } from "./products/productService";
+import { PrismaProductImageRepository } from "./products/productImageRepository";
+import { ProductImageService } from "./products/productImageService";
+import { LocalImageStorage } from "./products/productImageStorage";
 import { PrismaProfileRepository } from "./profile/profileRepository";
 import { ProfileService } from "./profile/profileService";
 import { PrismaReviewRepository } from "./reviews/reviewRepository";
@@ -31,7 +34,15 @@ if (!process.env.JWT_SECRET) {
 const prisma = createPrismaClient();
 const userService = new UserService(new PrismaUserRepository(prisma));
 const productRepository = new PrismaProductRepository(prisma);
-const productService = new ProductService(productRepository);
+const imageStorage = new LocalImageStorage(
+	process.env.UPLOADS_DIR ?? "./uploads",
+);
+const productService = new ProductService(productRepository, imageStorage);
+const productImageService = new ProductImageService(
+	productRepository,
+	new PrismaProductImageRepository(prisma),
+	imageStorage,
+);
 const loginService = new LoginService(
 	new PrismaLoginRepository(prisma),
 	process.env.JWT_SECRET,
@@ -62,6 +73,10 @@ const app = createApp(
 	},
 	{
 		service: new ReviewService(new PrismaReviewRepository(prisma)),
+		jwtSecret: process.env.JWT_SECRET,
+	},
+	{
+		service: productImageService,
 		jwtSecret: process.env.JWT_SECRET,
 	},
 );

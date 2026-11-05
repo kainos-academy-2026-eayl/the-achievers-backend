@@ -47,6 +47,20 @@ model Product {
   cartItems   CartItem[]
   orderItems  OrderItem[]
   reviews     Review[]
+  images      ProductImage[]
+}
+
+model ProductImage {
+  id          String   @id @default(uuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  storageKey  String   @unique
+  contentType String
+  sizeBytes   Int
+  position    Int
+  createdAt   DateTime @default(now())
+
+  @@index([productId, position])
 }
 
 model Cart {
