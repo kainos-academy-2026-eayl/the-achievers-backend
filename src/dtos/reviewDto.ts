@@ -1,5 +1,8 @@
 import { ReviewError } from "../errors/reviewError";
-import type { ReviewRecord } from "../reviews/reviewRepository";
+import type {
+	ProductReviewRecord,
+	ReviewRecord,
+} from "../reviews/reviewRepository";
 
 export const MAX_REVIEW_COMMENT_LENGTH = 1000;
 const MAX_PRODUCT_ID_LENGTH = 200;
@@ -20,6 +23,14 @@ export interface ReviewResponseDto {
 	comment: string | null;
 	createdAt: Date;
 	updatedAt: Date;
+}
+
+export interface ProductReviewResponseDto {
+	productId: string;
+	rating: number;
+	comment: string | null;
+	firstName: string;
+	createdAt: Date;
 }
 
 export function parseProductId(value: string): string {
@@ -76,5 +87,17 @@ export function toReviewResponseDto(review: ReviewRecord): ReviewResponseDto {
 		comment: review.comment,
 		createdAt: review.createdAt,
 		updatedAt: review.updatedAt,
+	};
+}
+
+export function toProductReviewResponseDto(
+	review: ProductReviewRecord,
+): ProductReviewResponseDto {
+	return {
+		productId: review.productId,
+		rating: review.rating,
+		comment: review.comment,
+		firstName: review.user.name.trim().split(/\s+/)[0] || "Customer",
+		createdAt: review.createdAt,
 	};
 }

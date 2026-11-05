@@ -1,8 +1,10 @@
 import { randomUUID } from "node:crypto";
+import express from "express";
 import { SignJWT } from "jose";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createApp } from "../src/app";
+import { createReviewsRouter } from "../src/reviews/reviewController";
 import { createPrismaClient } from "../src/prismaClient";
 import { PrismaProductRepository } from "../src/products/productRepository";
 import { ProductService } from "../src/products/productService";
@@ -20,6 +22,47 @@ const productIds = {
 	deletedOrder: `${fixturePrefix}-deleted-order`,
 };
 const EIGHT_DAYS_AGO = () => new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
+
+describe("public product reviews route", () => {
+	it("lists product reviews anonymously while keeping personal reviews protected", async () => {
+		const listForProduct = vi.fn(async (productId: string) => [
+			{
+				productId,
+				rating: 5,
+				comment: "Excellent cue",
+				firstName: "Ada",
+				createdAt: new Date("2026-01-02T00:00:00.000Z"),
+			},
+		]);
+		const app = express();
+		app.use(
+			"/api/reviews",
+			createReviewsRouter(
+				{
+					listForProduct,
+					listForUser: vi.fn(async () => []),
+					saveForUser: vi.fn(),
+				},
+				(_req, res) => res.sendStatus(401),
+			),
+		);
+
+		const response = await request(app).get("/api/reviews/cue-123").expect(200);
+
+		expect(listForProduct).toHaveBeenCalledWith("cue-123");
+		expect(response.body).toEqual([
+			{
+				productId: "cue-123",
+				rating: 5,
+				comment: "Excellent cue",
+				firstName: "Ada",
+				createdAt: "2026-01-02T00:00:00.000Z",
+			},
+		]);
+		expect(response.headers["cache-control"]).toBe("no-store");
+		await request(app).get("/api/reviews/me").expect(401);
+	});
+});
 
 describeWithDatabase("reviews API with PostgreSQL", () => {
 	if (!process.env.DATABASE_URL) return;
