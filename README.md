@@ -154,6 +154,23 @@ which case the creation route is not mounted.
 
 Run `npm test -- tests/productCreation.test.ts tests/products.test.ts tests/requireAdmin.test.ts`.
 
+## Admin product updates
+
+`PUT /api/products/:id` replaces all five editable fields: `name`, `description`,
+`category`, `price` (pounds) and `stock`. Every field is required. Text and price
+validation reuse the product-creation rules. Stock accepts a whole number or a
+digits-only string between `0` and `2147483647`; fractional, negative and
+partially numeric strings are rejected. IDs, ratings and review counts remain
+server-managed.
+
+The endpoint requires a valid admin login token. Success returns `200` with the
+updated catalogue response and `Cache-Control: no-store`. Invalid input returns
+`400` with field errors; a missing product returns `404`, including deletion
+during an update. Unexpected database failures are logged and return a generic
+`500`, never a misleading not-found response. No migration is needed.
+
+Run `npm test -- tests/productUpdate.test.ts tests/productCreation.test.ts`.
+
 ## Admin product deletion
 
 `DELETE /api/products/:id` permanently deletes a product. Supply the login JWT
