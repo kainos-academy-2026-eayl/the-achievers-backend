@@ -167,6 +167,29 @@ configured frontend origin allow the `Authorization` header.
 Run `npm test -- tests/productDeletion.test.ts tests/products.test.ts tests/requireAdmin.test.ts`.
 These isolated tests require no running database.
 
+## Product images
+
+Each product can have many images. Files are stored on local disk under
+`UPLOADS_DIR` (default `./uploads`, git-ignored); only metadata is in the database.
+Local disk storage is not shared between backend instances, so horizontal scaling
+needs a shared store (for example object storage) before it is used.
+
+- `POST /api/products/:id/images` (admin, multipart field `image`) uploads an image
+  and returns `201`, a `Location` header and `{ id, url, contentType }`.
+- `PUT /api/products/:id/images/:imageId` (admin, multipart field `image`) replaces
+  an image and deletes the old file.
+- `DELETE /api/products/:id/images/:imageId` (admin) removes an image and returns `204`.
+- `GET /api/products/:id/images/:imageId` (public) serves the file with `nosniff`
+  and an immutable cache header.
+
+Accepted types are JPEG, PNG and WebP, checked by file content (magic bytes), not
+the client MIME type. The limit is 20 MB per file. Unsupported types return `400`
+with `fieldErrors.image`; oversized files return `413`. Product responses include
+an `images` array in position order.
+
+Run `npm test -- tests/productImages.test.ts`. These tests use in-memory fakes and
+need no running database.
+
 ## Local development
 
 Ensure `.env` has a valid `DATABASE_URL`, `PORT`, and `JWT_SECRET`, then start
