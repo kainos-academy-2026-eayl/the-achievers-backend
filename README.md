@@ -132,6 +132,23 @@ comparison to keep timing similar. Attempts are limited to 5 per email per
 15 minutes (`429` with `Retry-After`). Responses are `Cache-Control: no-store`.
 Existing sessions and tokens are not revoked by a reset.
 
+## Admin product updates
+
+`PUT /api/products/:id` replaces all five editable fields: `name`, `description`,
+`category`, `price` (pounds) and `stock`. Every field is required. Text and price
+validation reuse the product-creation rules. Stock accepts a whole number or a
+digits-only string between `0` and `2147483647`; fractional, negative and
+partially numeric strings are rejected. IDs, ratings and review counts remain
+server-managed.
+
+The endpoint requires a valid admin login token. Success returns `200` with the
+updated catalogue response and `Cache-Control: no-store`. Invalid input returns
+`400` with field errors; a missing product returns `404`, including deletion
+during an update. Unexpected database failures are logged and return a generic
+`500`, never a misleading not-found response. No migration is needed.
+
+Run `npm test -- tests/productUpdate.test.ts tests/productCreation.test.ts`.
+
 ## Admin product deletion
 
 `DELETE /api/products/:id` permanently deletes a product. Supply the login JWT

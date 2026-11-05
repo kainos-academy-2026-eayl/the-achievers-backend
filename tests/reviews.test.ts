@@ -67,7 +67,7 @@ describeWithDatabase("reviews API with PostgreSQL", () => {
 	async function createOrder(
 		userId: number,
 		{
-			status = "placed",
+			status = "delivered",
 			createdAt = EIGHT_DAYS_AGO(),
 			products = [productIds.cue, productIds.chalk],
 		}: { status?: string; createdAt?: Date; products?: string[] } = {},
@@ -242,7 +242,10 @@ describeWithDatabase("reviews API with PostgreSQL", () => {
 	});
 
 	it.each([
-		["a recent order that is not delivered yet", { createdAt: new Date() }],
+		[
+			"a recent order that is not delivered yet",
+			{ status: "placed", createdAt: new Date() },
+		],
 		["a cancelled order", { status: "cancelled" }],
 	])("refuses reviews for %s", async (_label, options) => {
 		const customer = await createUser();
