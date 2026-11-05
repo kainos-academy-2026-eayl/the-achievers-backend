@@ -22,6 +22,10 @@ import type { ProfileService } from "./profile/profileService";
 import { createRateLimiter } from "./rateLimit";
 import { createResetPassRouter } from "./resetPass/resetPassController";
 import type { ResetPassService } from "./resetPass/resetPassService";
+import {
+	createReviewsRouter,
+	type ReviewApiService,
+} from "./reviews/reviewController";
 import { createSafeWordHintRouter } from "./safeWordHint/safeWordHintController";
 import type { SafeWordHintService } from "./safeWordHint/safeWordHintService";
 import { createLoginRouter } from "./userLogin/loginController";
@@ -61,6 +65,10 @@ export function createApp(
 	},
 	safeWordHintService?: Pick<SafeWordHintService, "getSafeWordHint">,
 	resetPassService?: Pick<ResetPassService, "verifySafeWord" | "resetPassword">,
+	reviews?: {
+		service: ReviewApiService;
+		jwtSecret: string;
+	},
 ): Express {
 	const app = express();
 
@@ -135,6 +143,15 @@ export function createApp(
 			"/api/safe-word-hint",
 			createRateLimiter({ limit: 5, windowMs: 60_000 }),
 			createSafeWordHintRouter(safeWordHintService),
+		);
+	}
+	if (reviews) {
+		app.use(
+			"/api/reviews",
+			createReviewsRouter(
+				reviews.service,
+				createRequireAuth(reviews.jwtSecret),
+			),
 		);
 	}
 	if (resetPassService) {

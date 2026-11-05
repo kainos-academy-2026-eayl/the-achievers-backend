@@ -54,6 +54,7 @@ function createResetApp() {
 		undefined,
 		undefined,
 		undefined,
+		undefined,
 		new ResetPassService(resetRepository),
 	);
 	return { app, resetRepository };

@@ -33,6 +33,7 @@ function createHintApp(
 		undefined,
 		undefined,
 		undefined,
+		undefined,
 		new SafeWordHintService({ findSafeWordHintByEmail }),
 	);
 }

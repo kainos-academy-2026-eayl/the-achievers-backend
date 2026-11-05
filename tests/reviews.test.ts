@@ -34,6 +34,9 @@ describeWithDatabase("reviews API with PostgreSQL", () => {
 		undefined,
 		undefined,
 		undefined,
+		undefined,
+		undefined,
+		undefined,
 		{
 			service: new ReviewService(new PrismaReviewRepository(prisma)),
 			jwtSecret,
