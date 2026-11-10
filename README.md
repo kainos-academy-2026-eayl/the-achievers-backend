@@ -203,6 +203,58 @@ ADMIN_PASSWORD='a-strong-password' npx prisma db seed
 Without `ADMIN_PASSWORD`, admin seeding is skipped while product seeding still
 runs.
 
+## Running with Docker
+
+The [Dockerfile](./Dockerfile) builds the API as a multi-stage image
+(`node:22-alpine`) that listens on port 3000.
+
+Start the database (skip if it is already running):
+
+```sh
+docker compose up -d
+```
+
+Build the image:
+
+```sh
+docker build -t achievers-backend .
+```
+
+On a network that intercepts TLS (for example Kainos Zscaler), the Prisma
+download during the build fails with `unable to get local issuer certificate`.
+Export the Kainos CA certificates once, then pass them as a build secret. The
+certificates are only used during the build and are not stored in the image:
+
+```sh
+security find-certificate -a -c "KAINOS" -p /Library/Keychains/System.keychain > ~/kainos-ca.pem
+docker build --secret id=extra_ca,src=$HOME/kainos-ca.pem -t achievers-backend .
+```
+
+Run the container. `JWT_SECRET` must be at least 32 characters, and the
+database host must be `host.docker.internal` rather than `localhost`:
+
+```sh
+docker run -d --name achievers-backend -p 3000:3000 \
+  -e JWT_SECRET="a-secret-of-at-least-32-characters" \
+  -e DATABASE_URL="postgresql://dev:dev@host.docker.internal:5432/app_dev?schema=public" \
+  -e FRONTEND_ORIGIN="http://localhost:8000" \
+  achievers-backend
+```
+
+Check it is running:
+
+```sh
+curl localhost:3000/health
+```
+
+Useful commands:
+
+```sh
+docker logs -f achievers-backend   # view logs
+docker stop achievers-backend      # stop the container
+docker rm achievers-backend        # remove it before running again
+```
+
 ## Shopping cart
 
 The API defaults to **http://localhost:3000** (`PORT` can override this).
