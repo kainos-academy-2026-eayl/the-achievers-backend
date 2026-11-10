@@ -1,0 +1,37 @@
+node_modules
+
+# Tooling
+.git
+.github
+.agents
+.gitignore
+.DS_Store
+
+# Secrets
+.env
+.env.*
+
+# Rebuilt in the image
+dist
+test-results
+src/generated
+
+# Tests
+tests
+vitest.config.*
+
+# Docs
+README.md
+*.md
+code_reviews
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Not needed to build or run
+db
+skills-lock.json
+biome.json
+.nvmrc
