@@ -8,11 +8,11 @@ COPY package.json package-lock.json ./
 # Skip tools that are only needed for building, not running
 RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev --omit=optional
 
-# Delete files for databases we don't use, to keep the image small
+# Delete files for Prisma's query engines for databases we don't use, map files used for debugging, to keep the image small
 RUN find node_modules/@prisma/client/runtime \
-      \( -name 'query_compiler_*_bg.cockroachdb.*' -o -name 'query_compiler_*_bg.mysql.*' \
-         -o -name 'query_compiler_*_bg.sqlite.*' -o -name 'query_compiler_*_bg.sqlserver.*' \
-         -o -name '*.map' \) -delete
+  \( -name 'query_compiler_*_bg.cockroachdb.*' -o -name 'query_compiler_*_bg.mysql.*' \
+  -o -name 'query_compiler_*_bg.sqlite.*' -o -name 'query_compiler_*_bg.sqlserver.*' \
+  -o -name '*.map' \) -delete
 
 # Stage 2: turn our TypeScript code into runnable JavaScript
 FROM node:22-alpine AS builder
@@ -29,8 +29,8 @@ RUN --mount=type=cache,target=/root/.npm npm ci
 COPY prisma.config.ts tsconfig.json ./
 COPY prisma ./prisma
 RUN --mount=type=secret,id=extra_ca \
-    if [ -f /run/secrets/extra_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/extra_ca; fi \
-    && npx prisma generate --config prisma.config.ts
+  if [ -f /run/secrets/extra_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/extra_ca; fi \
+  && npx prisma generate --config prisma.config.ts
 
 COPY src ./src
 
