@@ -5,3 +5,6 @@ dist/
 .DS_Store
 code_reviews/
 .env.test
+.terraform/
+*.tfstate
+*.tfstate.*
