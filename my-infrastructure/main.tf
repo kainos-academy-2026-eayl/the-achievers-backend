@@ -5,6 +5,15 @@ terraform {
       version = "~> 4.0"
     }
   }
+
+  backend "azurerm" {
+    use_cli              = true
+    use_azuread_auth     = true
+    resource_group_name  = "rg-achievers-backend-tfstate-dev"
+    storage_account_name = "stachieversdevstate123"
+    container_name       = "tfstate"
+    key                  = "achievers-backend-dev.tfstate"
+  }
 }
 
 provider "azurerm" {
