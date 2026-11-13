@@ -21,11 +21,13 @@ provider "azurerm" {
   subscription_id = "ca3b1116-a974-4549-88c2-8b56da5130d0"
 }
 
-resource "azurerm_resource_group" "main" {
-  name     = var.resource_group_name
-  location = var.location
+moved {
+  from = azurerm_resource_group.main
+  to   = module.resource_group.azurerm_resource_group.this
+}
 
-  tags = {
-    environment = var.environment
-  }
+module "resource_group" {
+  source              = "./modules/resource-group"
+  resource_group_name = var.resource_group_name
+  location            = var.location
 }
