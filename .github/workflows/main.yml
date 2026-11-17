@@ -1,0 +1,21 @@
+name: First CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  hello:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Display message
+        run: echo "Hello from my first GitHub Actions workflow!"
+
+      - name: Build Docker image
+        run: docker build -t my-app:${{ github.sha }} .
