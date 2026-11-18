@@ -62,7 +62,7 @@ jobs:
         run: npm test
 
   docker:
-    name: Build Docker image
+    name: Build container image
     runs-on: ubuntu-latest
     needs: checks
 
@@ -70,11 +70,5 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Display message
-        run: echo "Hello from my first Github Actions workflow!"
-
-      - name: Build Docker image
-        run: docker build -t my-app:${{ github.sha }} .
-      - name: Push Docker image
-        run: docker push my-app:${{ github.sha }}
-        
+      - name: Build docker image
+        run: docker build -t the-achievers-backend:${{ github.sha }} .
