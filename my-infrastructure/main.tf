@@ -31,3 +31,9 @@ module "resource_group" {
   resource_group_name = var.resource_group_name
   location            = var.location
 }
+
+module "frontend_resource_group" {
+  source              = "./modules/resource-group"
+  resource_group_name = var.frontend_resource_group_name
+  location            = var.location
+}

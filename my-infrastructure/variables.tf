@@ -9,6 +9,17 @@ variable "resource_group_name" {
   }
 }
 
+variable "frontend_resource_group_name" {
+  description = "Name of the Azure resource group for the frontend."
+  type        = string
+  default     = "rg-achievers-frontend-dev"
+
+  validation {
+    condition     = can(regex("^[a-zA-Z0-9_().-]{0,89}[a-zA-Z0-9_()-]$", var.frontend_resource_group_name))
+    error_message = "frontend_resource_group_name must be 1-90 characters (letters, numbers, _ ( ) . -) and cannot end with a period."
+  }
+}
+
 variable "location" {
   description = "Azure region for the resource group."
   type        = string
