@@ -14,7 +14,6 @@ jobs:
   checks:
     name: Build, lint and test
     runs-on: ubuntu-latest
-    if: github.event.action != 'labeled' || github.event.label.name == 'publish-image'
 
     services:
       postgres:
@@ -89,12 +88,13 @@ jobs:
     name: Push container image
     runs-on: ubuntu-latest
     needs: build-image
+    if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'publish-image')
     permissions:
       contents: read
       id-token: write
 
     env:
-      IMAGE: ${{ secrets.ACR_NAME }}.azurecr.io/the-achievers-backend
+       IMAGE: ${{ secrets.ACR_NAME && format('{0}.azurecr.io/the-achievers-backend', secrets.ACR_NAME) || 'the-achievers-backend' }}
 
     steps:
       - name: Download image
