@@ -1,43 +1,31 @@
-variable "resource_group_name" {
-  description = "Name of the Azure resource group."
+variable "project" {
+  description = "Project name used as part of every resource name."
   type        = string
-  default     = "rg-achievers-backend-dev"
+  default     = "achievers"
 
   validation {
-    condition     = can(regex("^[a-zA-Z0-9_().-]{0,89}[a-zA-Z0-9_()-]$", var.resource_group_name))
-    error_message = "resource_group_name must be 1-90 characters (letters, numbers, _ ( ) . -) and cannot end with a period."
+    condition     = can(regex("^[a-z0-9-]{1,20}$", var.project))
+    error_message = "project must be 1-20 characters of lowercase letters, numbers or hyphens."
   }
 }
 
-variable "frontend_resource_group_name" {
-  description = "Name of the Azure resource group for the frontend."
+variable "environment" {
+  description = "Deployment environment, used as a suffix in resource names."
   type        = string
-  default     = "rg-achievers-frontend-dev"
 
   validation {
-    condition     = can(regex("^[a-zA-Z0-9_().-]{0,89}[a-zA-Z0-9_()-]$", var.frontend_resource_group_name))
-    error_message = "frontend_resource_group_name must be 1-90 characters (letters, numbers, _ ( ) . -) and cannot end with a period."
+    condition     = contains(["dev", "test", "prod"], var.environment)
+    error_message = "environment must be one of: dev, test, prod."
   }
 }
 
 variable "location" {
-  description = "Azure region for the resource group."
+  description = "Azure region for the resource groups."
   type        = string
   default     = "uksouth"
 
   validation {
     condition     = contains(["uksouth", "ukwest", "northeurope", "westeurope"], var.location)
     error_message = "location must be one of: uksouth, ukwest, northeurope, westeurope."
-  }
-}
-
-variable "environment" {
-  description = "Deployment environment."
-  type        = string
-  default     = "dev"
-
-  validation {
-    condition     = contains(["dev", "test", "prod"], var.environment)
-    error_message = "environment must be one of: dev, test, prod."
   }
 }
