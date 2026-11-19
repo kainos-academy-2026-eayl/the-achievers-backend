@@ -41,7 +41,3 @@ module "frontend_resource_group" {
   location            = var.location
 }
 
-resource "terraform_data" "pipeline_test" {
-  input = var.test_message
-}
-
