@@ -40,3 +40,8 @@ module "frontend_resource_group" {
   resource_group_name = local.frontend_resource_group_name
   location            = var.location
 }
+
+resource "terraform_data" "pipeline_test" {
+  input = var.test_message
+}
+

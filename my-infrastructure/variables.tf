@@ -29,3 +29,9 @@ variable "location" {
     error_message = "location must be one of: uksouth, ukwest, northeurope, westeurope."
   }
 }
+
+variable "test_message" {
+  description = "Throwaway value to test the pipeline apply."
+  type        = string
+  default     = "pipeline-apply-test"
+}
