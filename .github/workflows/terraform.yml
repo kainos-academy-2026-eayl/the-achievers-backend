@@ -49,13 +49,25 @@ jobs:
       - name: Check formatting
         run: terraform fmt -check -recursive
 
-      - name: Init
-        run: terraform init -input=false -backend-config="environments/${ENVIRONMENT}.backend.hcl"
+      - name: Init (validation only)
+        run: terraform init -input=false -backend=false
 
       - name: Validate
         run: terraform validate
 
+      - name: Init backend
+        id: backend_init
+        if: >-
+          github.event_name == 'push' ||
+          (github.event.pull_request.head.repo.full_name == github.repository &&
+           github.actor != 'dependabot[bot]' &&
+           env.ARM_CLIENT_ID != '' &&
+           env.ARM_TENANT_ID != '' &&
+           env.ARM_SUBSCRIPTION_ID != '')
+        run: terraform init -input=false -backend-config="environments/${ENVIRONMENT}.backend.hcl"
+
       - name: Plan
+        if: steps.backend_init.outcome == 'success'
         run: terraform plan -input=false -var-file="environments/${ENVIRONMENT}.tfvars" -out=tfplan
 
       - name: Apply (main only)
