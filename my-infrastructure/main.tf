@@ -33,6 +33,10 @@ module "resource_group" {
   source              = "./modules/resource-group"
   resource_group_name = local.backend_resource_group_name
   location            = var.location
+
+  tags = {
+    test = "pipeline-demo"
+  }
 }
 
 module "frontend_resource_group" {
@@ -40,4 +44,3 @@ module "frontend_resource_group" {
   resource_group_name = local.frontend_resource_group_name
   location            = var.location
 }
-
