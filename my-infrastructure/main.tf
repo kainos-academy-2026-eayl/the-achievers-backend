@@ -24,6 +24,8 @@ locals {
   frontend_resource_group_name = "rg-${var.project}-frontend-${var.environment}"
   key_vault_name               = "kv-${var.project}-${var.environment}"
   managed_identity_name        = "id-${var.project}-${var.environment}"
+  log_analytics_workspace_name = "log-${var.project}-${var.environment}"
+  container_app_env_name       = "cae-${var.project}-${var.environment}"
 }
 
 moved {
@@ -54,4 +56,12 @@ module "managed_identity" {
   name                = local.managed_identity_name
   resource_group_name = module.resource_group.resource_group_name
   location            = var.location
+}
+# Shared by the frontend and backend apps so they can talk to each other privately.
+module "container_app_environment" {
+  source                         = "./modules/container-app-environment"
+  container_app_environment_name = local.container_app_env_name
+  log_analytics_workspace_name   = local.log_analytics_workspace_name
+  resource_group_name            = module.resource_group.resource_group_name
+  location                       = var.location
 }

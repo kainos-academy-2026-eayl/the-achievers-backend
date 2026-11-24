@@ -33,3 +33,11 @@ output "managed_identity_id" {
 output "managed_identity_client_id" {
   value = module.managed_identity.client_id
 }
+
+output "container_app_environment_id" {
+  value = module.container_app_environment.id
+}
+
+output "container_app_environment_default_domain" {
+  value = module.container_app_environment.default_domain
+}
