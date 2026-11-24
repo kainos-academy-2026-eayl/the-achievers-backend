@@ -25,3 +25,11 @@ output "key_vault_name" {
 output "key_vault_uri" {
   value = module.key_vault.key_vault_uri
 }
+
+output "managed_identity_id" {
+  value = module.managed_identity.id
+}
+
+output "managed_identity_client_id" {
+  value = module.managed_identity.client_id
+}
