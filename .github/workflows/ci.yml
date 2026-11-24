@@ -173,7 +173,7 @@ jobs:
         with:
           repository: kainos-academy-2026-eayl/the-achievers-frontend
           ref: main
-          token: ${{ secrets.FRONTEND_REPO_TOKEN }}
+          token: ${{ secrets.FRONTEND_REPO_TOKEN || github.token }}
 
       - name: Get frontend commit SHA
         id: sha
