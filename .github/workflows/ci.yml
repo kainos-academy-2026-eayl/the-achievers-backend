@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_dispatch:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, labeled]
@@ -9,6 +10,9 @@ on:
 
 permissions:
   contents: read
+
+env:
+  TF_ENVIRONMENT: dev
 
 jobs:
   checks:
@@ -62,8 +66,72 @@ jobs:
       - name: Test
         run: npm test
 
-  build-image:
-    name: Build container image
+  terraform-plan:
+    name: Terraform plan (dev)
+    runs-on: ubuntu-latest
+    needs: checks
+    permissions:
+      contents: read
+      id-token: write
+
+    concurrency:
+      group: terraform-dev
+      cancel-in-progress: false
+      queue: max
+
+    defaults:
+      run:
+        working-directory: my-infrastructure
+
+    env:
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_USE_OIDC: "true"
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "false"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Check formatting
+        run: terraform fmt -check -recursive
+
+      - name: Init (validation only)
+        run: terraform init -input=false -backend=false
+
+      - name: Validate
+        run: terraform validate
+
+      - name: Init backend
+        id: backend_init
+        if: >-
+          github.event_name != 'pull_request' ||
+          (github.event.pull_request.head.repo.full_name == github.repository &&
+           github.actor != 'dependabot[bot]' &&
+           env.ARM_CLIENT_ID != '' &&
+           env.ARM_TENANT_ID != '' &&
+           env.ARM_SUBSCRIPTION_ID != '')
+        run: terraform init -input=false -backend-config="environments/${TF_ENVIRONMENT}.backend.hcl"
+
+      - name: Plan
+        if: steps.backend_init.outcome == 'success'
+        run: terraform plan -input=false -var-file="environments/${TF_ENVIRONMENT}.tfvars" -out=tfplan
+
+      - name: Upload plan
+        if: steps.backend_init.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: my-infrastructure/tfplan
+          retention-days: 1
+
+  build-backend-image:
+    name: Build backend image
     runs-on: ubuntu-latest
     needs: checks
 
@@ -75,19 +143,51 @@ jobs:
         run: docker build -t the-achievers-backend:${{ github.sha }} .
 
       - name: Save image to a file
-        run: docker save the-achievers-backend:${{ github.sha }} -o image.tar
+        run: docker save the-achievers-backend:${{ github.sha }} -o backend-image.tar
 
       - name: Upload image
         uses: actions/upload-artifact@v4
         with:
-          name: container-image
-          path: image.tar
+          name: backend-image
+          path: backend-image.tar
           retention-days: 1
 
-  push-image:
-    name: Push container image
+  build-frontend-image:
+    name: Build frontend image
     runs-on: ubuntu-latest
-    needs: build-image
+    needs: checks
+    outputs:
+      sha: ${{ steps.sha.outputs.sha }}
+
+    steps:
+      - name: Checkout frontend repo
+        uses: actions/checkout@v4
+        with:
+          repository: kainos-academy-2026-eayl/the-achievers-frontend
+          ref: main
+          token: ${{ secrets.FRONTEND_REPO_TOKEN }}
+
+      - name: Get frontend commit SHA
+        id: sha
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Build docker image
+        run: docker build -t the-achievers-frontend:${{ steps.sha.outputs.sha }} .
+
+      - name: Save image to a file
+        run: docker save the-achievers-frontend:${{ steps.sha.outputs.sha }} -o frontend-image.tar
+
+      - name: Upload image
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-image
+          path: frontend-image.tar
+          retention-days: 1
+
+  push-backend-image:
+    name: Push backend image
+    runs-on: ubuntu-latest
+    needs: [terraform-plan, build-backend-image, build-frontend-image]
     if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'publish-image')
     permissions:
       contents: read
@@ -100,11 +200,11 @@ jobs:
       - name: Download image
         uses: actions/download-artifact@v4
         with:
-          name: container-image
+          name: backend-image
 
       - name: Load image
         run: |
-          docker load -i image.tar
+          docker load -i backend-image.tar
           docker tag the-achievers-backend:${{ github.sha }} $IMAGE:${{ github.sha }}
 
       - name: Log in to Azure
@@ -125,94 +225,68 @@ jobs:
           docker tag $IMAGE:${{ github.sha }} $IMAGE:latest
           docker push $IMAGE:latest
 
-  terraform-plan:
-    name: Terraform plan (dev)
+  push-frontend-image:
+    name: Push frontend image
     runs-on: ubuntu-latest
-    needs: checks
-    if: github.event_name == 'pull_request'
+    needs: [build-frontend-image, push-backend-image]
+    if: github.ref == 'refs/heads/main'
     permissions:
       contents: read
       id-token: write
-    concurrency:
-      group: terraform-dev
-      cancel-in-progress: false
-
-    defaults:
-      run:
-        working-directory: my-infrastructure
 
     env:
-      ENVIRONMENT: dev
-      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      ARM_USE_OIDC: "true"
-      TF_IN_AUTOMATION: "true"
-      TF_INPUT: "false"
+      IMAGE: ${{ secrets.ACR_NAME }}.azurecr.io/the-achievers-frontend
+      SHA: ${{ needs.build-frontend-image.outputs.sha }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
+      - name: Download image
+        uses: actions/download-artifact@v4
         with:
-          terraform_version: "1.17.2"
+          name: frontend-image
 
-      - name: Check formatting
-        run: terraform fmt -check -recursive
-
-      - name: Init (validation only)
-        run: terraform init -backend=false
-
-      - name: Validate
-        run: terraform validate
-
-      - name: Init backend
-        id: backend_init
-        # Fork and Dependabot PRs get no secrets/OIDC, so skip the Azure steps for them
-        if: >-
-          github.event.pull_request.head.repo.full_name == github.repository &&
-          github.actor != 'dependabot[bot]'
-        run: terraform init -backend-config="environments/${ENVIRONMENT}.backend.hcl"
-
-      - name: Plan
-        if: steps.backend_init.outcome == 'success'
+      - name: Load image
         run: |
-          terraform plan -lock-timeout=5m -var-file="environments/${ENVIRONMENT}.tfvars" -out=tfplan
-          {
-            echo '### Terraform plan (dev)'
-            echo '```'
-            terraform show -no-color tfplan
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+          docker load -i frontend-image.tar
+          docker tag the-achievers-frontend:$SHA $IMAGE:$SHA
+          docker tag the-achievers-frontend:$SHA $IMAGE:latest
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Push image
+        run: |
+          az acr login --name ${{ secrets.ACR_NAME }}
+          docker push --all-tags $IMAGE
 
   terraform-apply:
     name: Terraform apply (dev)
     runs-on: ubuntu-latest
-    needs: push-image
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [terraform-plan, push-frontend-image]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     permissions:
       contents: read
       id-token: write
+
     concurrency:
       group: terraform-dev
       cancel-in-progress: false
+      queue: max
 
     defaults:
       run:
         working-directory: my-infrastructure
 
     env:
-      ENVIRONMENT: dev
       ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       ARM_USE_OIDC: "true"
       TF_IN_AUTOMATION: "true"
       TF_INPUT: "false"
-      # When you add an App Service/Container App, pass the image you just pushed:
-      # TF_VAR_image_tag: ${{ github.sha }}
 
     steps:
       - name: Checkout code
@@ -220,14 +294,15 @@ jobs:
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
+
+      - name: Download plan
+        uses: actions/download-artifact@v4
         with:
-          terraform_version: "1.17.2"
+          name: tfplan
+          path: my-infrastructure
 
-      - name: Init
-        run: terraform init -backend-config="environments/${ENVIRONMENT}.backend.hcl"
-
-      - name: Plan
-        run: terraform plan -lock-timeout=5m -var-file="environments/${ENVIRONMENT}.tfvars" -out=tfplan
+      - name: Init backend
+        run: terraform init -input=false -backend-config="environments/${TF_ENVIRONMENT}.backend.hcl"
 
       - name: Apply
-        run: terraform apply -lock-timeout=5m -auto-approve tfplan
+        run: terraform apply -input=false -auto-approve tfplan
