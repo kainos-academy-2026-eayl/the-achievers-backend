@@ -23,6 +23,7 @@ locals {
   backend_resource_group_name  = "rg-${var.project}-backend-${var.environment}"
   frontend_resource_group_name = "rg-${var.project}-frontend-${var.environment}"
   key_vault_name               = "kv-${var.project}-${var.environment}"
+  managed_identity_name        = "id-${var.project}-${var.environment}"
 }
 
 moved {
@@ -44,6 +45,13 @@ module "frontend_resource_group" {
 module "key_vault" {
   source              = "./modules/key-vault"
   key_vault_name      = local.key_vault_name
+  resource_group_name = module.resource_group.resource_group_name
+  location            = var.location
+}
+# Used by the Container Apps to pull images from ACR and read Key Vault secrets.
+module "managed_identity" {
+  source              = "./modules/managed-identity"
+  name                = local.managed_identity_name
   resource_group_name = module.resource_group.resource_group_name
   location            = var.location
 }
