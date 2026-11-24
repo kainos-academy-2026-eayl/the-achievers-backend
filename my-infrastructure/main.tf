@@ -22,6 +22,7 @@ provider "azurerm" {
 locals {
   backend_resource_group_name  = "rg-${var.project}-backend-${var.environment}"
   frontend_resource_group_name = "rg-${var.project}-frontend-${var.environment}"
+  key_vault_name               = "kv-${var.project}-${var.environment}"
 }
 
 moved {
@@ -37,5 +38,12 @@ module "resource_group" {
 module "frontend_resource_group" {
   source              = "./modules/resource-group"
   resource_group_name = local.frontend_resource_group_name
+  location            = var.location
+}
+# Secrets are added manually in the portal, never in Terraform.
+module "key_vault" {
+  source              = "./modules/key-vault"
+  key_vault_name      = local.key_vault_name
+  resource_group_name = module.resource_group.resource_group_name
   location            = var.location
 }
