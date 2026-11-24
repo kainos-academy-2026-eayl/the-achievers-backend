@@ -11,6 +11,12 @@ on:
 permissions:
   contents: read
 
+# Queue main runs so a saved Terraform plan can't go stale before it's applied;
+# cancel superseded runs on PR branches.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 env:
   TF_ENVIRONMENT: dev
 
@@ -156,6 +162,8 @@ jobs:
     name: Build frontend image
     runs-on: ubuntu-latest
     needs: checks
+    # Fork PRs don't get FRONTEND_REPO_TOKEN, and github.token can't read the frontend repo.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     outputs:
       sha: ${{ steps.sha.outputs.sha }}
 
