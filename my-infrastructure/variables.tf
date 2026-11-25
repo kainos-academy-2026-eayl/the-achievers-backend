@@ -29,3 +29,14 @@ variable "location" {
     error_message = "location must be one of: uksouth, ukwest, northeurope, westeurope."
   }
 }
+
+variable "acr_name" {
+  description = "Name of the existing Azure Container Registry holding the app images."
+  type        = string
+}
+
+variable "image_tag" {
+  description = "Image tag deployed for both the frontend and backend."
+  type        = string
+  default     = "latest"
+}

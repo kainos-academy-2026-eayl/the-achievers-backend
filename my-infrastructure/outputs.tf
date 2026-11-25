@@ -41,3 +41,11 @@ output "container_app_environment_id" {
 output "container_app_environment_default_domain" {
   value = module.container_app_environment.default_domain
 }
+
+output "backend_internal_url" {
+  value = "https://${module.backend_app.fqdn}"
+}
+
+output "frontend_url" {
+  value = "https://${module.frontend_app.fqdn}"
+}
