@@ -91,10 +91,12 @@ module "backend_app" {
     "database-url"      = "${local.key_vault_secrets_url}/database-url"
     "jwt-secret"        = "${local.key_vault_secrets_url}/jwt-secret"
     "db-admin-password" = "${local.key_vault_secrets_url}/DB-ADMIN-PASSWORD"
+    "admin-password"    = "${local.key_vault_secrets_url}/ADMIN-PASSWORD"
   }
   secret_env = {
-    DATABASE_URL = "database-url"
-    JWT_SECRET   = "jwt-secret"
+    DATABASE_URL   = "database-url"
+    JWT_SECRET     = "jwt-secret"
+    ADMIN_PASSWORD = "admin-password"
   }
   env = {
     BOOTSTRAP_DATABASE = "true"

@@ -15,6 +15,7 @@ import { PrismaResetPassRepository } from "./resetPass/resetPassRepository";
 import { ResetPassService } from "./resetPass/resetPassService";
 import { PrismaReviewRepository } from "./reviews/reviewRepository";
 import { ReviewService } from "./reviews/reviewService";
+import { seedDatabase } from "./seed";
 import { PrismaSafeWordHintRepository } from "./safeWordHint/safeWordHintRepository";
 import { SafeWordHintService } from "./safeWordHint/safeWordHintService";
 import { PrismaLoginRepository } from "./userLogin/loginRepository";
@@ -36,6 +37,7 @@ if (!process.env.JWT_SECRET) {
 const prisma = createPrismaClient();
 if (process.env.BOOTSTRAP_DATABASE === "true") {
 	await bootstrapDatabase(process.env.DATABASE_URL);
+	await seedDatabase(prisma, process.env.ADMIN_PASSWORD);
 }
 const userService = new UserService(new PrismaUserRepository(prisma));
 const productRepository = new PrismaProductRepository(prisma);
