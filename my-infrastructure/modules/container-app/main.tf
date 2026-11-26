@@ -3,6 +3,7 @@ resource "azurerm_container_app" "this" {
   resource_group_name          = var.resource_group_name
   container_app_environment_id = var.container_app_environment_id
   revision_mode                = "Single"
+  workload_profile_name        = "Consumption"
 
   identity {
     type         = "UserAssigned"
@@ -57,6 +58,44 @@ resource "azurerm_container_app" "this" {
         content {
           name        = env.key
           secret_name = env.value
+        }
+      }
+    }
+
+    dynamic "volume" {
+      for_each = var.postgres_enabled ? [1] : []
+      content {
+        name         = "postgres-data"
+        storage_type = "EmptyDir"
+      }
+    }
+
+    dynamic "container" {
+      for_each = var.postgres_enabled ? [1] : []
+      content {
+        name   = "postgres"
+        image  = "docker.io/library/postgres:17-alpine"
+        cpu    = 0.25
+        memory = "0.5Gi"
+
+        volume_mounts {
+          name = "postgres-data"
+          path = "/var/lib/postgresql/data"
+        }
+
+        env {
+          name  = "POSTGRES_USER"
+          value = "appuser"
+        }
+
+        env {
+          name  = "POSTGRES_DB"
+          value = "app_dev"
+        }
+
+        env {
+          name        = "POSTGRES_PASSWORD"
+          secret_name = "db-admin-password"
         }
       }
     }

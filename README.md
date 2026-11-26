@@ -178,6 +178,19 @@ npm run dev
 ```
 
 Database schema changes are managed with Prisma migrations in `prisma/migrations/`.
+
+The backend Container App's Terraform configuration includes a PostgreSQL
+sidecar for temporary development use. Its data is lost when the container is
+replaced. The sidecar uses the `DB-ADMIN-PASSWORD` Key Vault secret; the
+backend's existing `DATABASE_URL` must be configured separately to connect to
+it with matching credentials and a `localhost` host. Before starting the API,
+`BOOTSTRAP_DATABASE=true` waits for PostgreSQL and applies pending migrations;
+it refuses non-local database hosts to avoid migrating the previous database.
+Coordinate the secret change with deployment: changing it too early can disrupt
+the current revision, while deploying with the old URL prevents startup. The
+password in the URL must be percent-encoded if it contains special characters.
+Migrations do not seed data. Adding the sidecar increases the app's resource
+allocation and may incur charges.
 Users have an auto-incrementing integer `id` primary key, and email addresses
 remain unique. The ID is internal and is not included in registration responses.
 The ID migration preserves existing users and assigns each one an ID.

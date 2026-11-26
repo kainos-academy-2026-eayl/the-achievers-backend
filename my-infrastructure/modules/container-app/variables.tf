@@ -62,3 +62,9 @@ variable "secret_env" {
   type        = map(string)
   default     = {}
 }
+
+variable "postgres_enabled" {
+  description = "Run a temporary PostgreSQL sidecar using the db-admin-password secret."
+  type        = bool
+  default     = false
+}

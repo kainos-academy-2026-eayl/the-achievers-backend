@@ -2,6 +2,7 @@ import "dotenv/config";
 import { createApp } from "./app";
 import { PrismaCartRepository } from "./cart/cartRepository";
 import { CartService } from "./cart/cartService";
+import { bootstrapDatabase } from "./databaseStartup";
 import { PrismaOrderRepository } from "./orders/orderRepository";
 import { OrderService } from "./orders/orderService";
 import { startOrderStatusWorker } from "./orders/orderStatusWorker";
@@ -33,6 +34,9 @@ if (!process.env.JWT_SECRET) {
 }
 
 const prisma = createPrismaClient();
+if (process.env.BOOTSTRAP_DATABASE === "true") {
+	await bootstrapDatabase(process.env.DATABASE_URL);
+}
 const userService = new UserService(new PrismaUserRepository(prisma));
 const productRepository = new PrismaProductRepository(prisma);
 const productService = new ProductService(productRepository);
