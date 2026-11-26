@@ -55,3 +55,21 @@ variable "frontend_image_tag" {
     error_message = "frontend_image_tag must be a full 40-character commit SHA, not a mutable tag such as latest."
   }
 }
+
+variable "db_name" {
+  description = "Name of the application database."
+  type        = string
+  default     = "achievers"
+}
+
+variable "db_admin_username" {
+  description = "Administrator login for the PostgreSQL server."
+  type        = string
+}
+
+variable "db_admin_password" {
+  description = "Administrator password for the PostgreSQL server, from the DB_ADMIN_PASSWORD GitHub secret."
+  type        = string
+  sensitive   = true
+  ephemeral   = true
+}

@@ -133,6 +133,7 @@ jobs:
           # Must match the tags the push jobs publish.
           TF_VAR_backend_image_tag: ${{ github.sha }}
           TF_VAR_frontend_image_tag: ${{ needs.build-frontend-image.outputs.sha }}
+          TF_VAR_db_admin_password: ${{ secrets.DB_ADMIN_PASSWORD }}
         run: terraform plan -input=false -var-file="environments/${TF_ENVIRONMENT}.tfvars" -out=tfplan
 
       - name: Upload plan
@@ -320,4 +321,7 @@ jobs:
         run: terraform init -input=false -backend-config="environments/${TF_ENVIRONMENT}.backend.hcl"
 
       - name: Apply
+        env:
+          # Ephemeral variables aren't saved in the plan file, so they must be passed again.
+          TF_VAR_db_admin_password: ${{ secrets.DB_ADMIN_PASSWORD }}
         run: terraform apply -input=false -auto-approve tfplan

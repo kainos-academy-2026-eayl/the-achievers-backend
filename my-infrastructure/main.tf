@@ -1,4 +1,7 @@
 terraform {
+  # 1.11+ is needed for the write-only database password.
+  required_version = ">= 1.11"
+
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
@@ -28,6 +31,7 @@ locals {
   container_app_env_name       = "cae-${var.project}-${var.environment}"
   backend_app_name             = "ca-${var.project}-backend-${var.environment}"
   frontend_app_name            = "ca-${var.project}-frontend-${var.environment}"
+  postgres_server_name         = "psql-${var.project}-${var.environment}"
   registry_server              = "${var.acr_name}.azurecr.io"
   key_vault_secrets_url        = "${module.key_vault.key_vault_uri}secrets"
 
@@ -121,4 +125,14 @@ module "frontend_app" {
     NODE_ENV     = "production"
     API_BASE_URL = "https://${module.backend_app.fqdn}"
   }
+}
+# The backend's DATABASE-URL secret is set manually in Key Vault from these values.
+module "postgres" {
+  source                 = "./modules/postgres"
+  server_name            = local.postgres_server_name
+  resource_group_name    = module.resource_group.resource_group_name
+  location               = var.location
+  database_name          = var.db_name
+  administrator_login    = var.db_admin_username
+  administrator_password = var.db_admin_password
 }

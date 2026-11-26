@@ -49,3 +49,11 @@ output "backend_internal_url" {
 output "frontend_url" {
   value = "https://${module.frontend_app.fqdn}"
 }
+
+output "postgres_fqdn" {
+  value = module.postgres.fqdn
+}
+
+output "postgres_database_name" {
+  value = module.postgres.database_name
+}
