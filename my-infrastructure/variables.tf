@@ -29,3 +29,29 @@ variable "location" {
     error_message = "location must be one of: uksouth, ukwest, northeurope, westeurope."
   }
 }
+
+variable "acr_name" {
+  description = "Name of the existing Azure Container Registry holding the app images."
+  type        = string
+}
+
+# No defaults: CI must pass these so each new image creates a new revision.
+variable "backend_image_tag" {
+  description = "Backend image tag: the backend repo commit SHA that CI pushed."
+  type        = string
+
+  validation {
+    condition     = can(regex("^[0-9a-f]{40}$", var.backend_image_tag))
+    error_message = "backend_image_tag must be a full 40-character commit SHA, not a mutable tag such as latest."
+  }
+}
+
+variable "frontend_image_tag" {
+  description = "Frontend image tag: the frontend repo commit SHA that CI pushed."
+  type        = string
+
+  validation {
+    condition     = can(regex("^[0-9a-f]{40}$", var.frontend_image_tag))
+    error_message = "frontend_image_tag must be a full 40-character commit SHA, not a mutable tag such as latest."
+  }
+}

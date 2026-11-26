@@ -75,7 +75,10 @@ jobs:
   terraform-plan:
     name: Terraform plan (dev)
     runs-on: ubuntu-latest
-    needs: checks
+    # Waits for the frontend build to learn its commit SHA. That job is skipped
+    # on fork PRs, which only need fmt/validate here.
+    needs: [checks, build-frontend-image]
+    if: ${{ !cancelled() && needs.checks.result == 'success' && needs.build-frontend-image.result != 'failure' }}
     permissions:
       contents: read
       id-token: write
@@ -126,6 +129,10 @@ jobs:
 
       - name: Plan
         if: steps.backend_init.outcome == 'success'
+        env:
+          # Must match the tags the push jobs publish.
+          TF_VAR_backend_image_tag: ${{ github.sha }}
+          TF_VAR_frontend_image_tag: ${{ needs.build-frontend-image.outputs.sha }}
         run: terraform plan -input=false -var-file="environments/${TF_ENVIRONMENT}.tfvars" -out=tfplan
 
       - name: Upload plan

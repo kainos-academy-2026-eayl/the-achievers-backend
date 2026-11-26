@@ -26,6 +26,14 @@ locals {
   managed_identity_name        = "id-${var.project}-${var.environment}"
   log_analytics_workspace_name = "log-${var.project}-${var.environment}"
   container_app_env_name       = "cae-${var.project}-${var.environment}"
+  backend_app_name             = "ca-${var.project}-backend-${var.environment}"
+  frontend_app_name            = "ca-${var.project}-frontend-${var.environment}"
+  registry_server              = "${var.acr_name}.azurecr.io"
+  key_vault_secrets_url        = "${module.key_vault.key_vault_uri}secrets"
+
+  # Built from the name rather than the frontend module's output, which would
+  # create a cycle (the frontend already depends on the backend's URL).
+  frontend_url = "https://${local.frontend_app_name}.${module.container_app_environment.default_domain}"
 }
 
 moved {
@@ -64,4 +72,53 @@ module "container_app_environment" {
   log_analytics_workspace_name   = local.log_analytics_workspace_name
   resource_group_name            = module.resource_group.resource_group_name
   location                       = var.location
+}
+# The identity's AcrPull and Key Vault Secrets User roles were assigned manually
+# by an admin, because the pipeline's service principal can't assign roles.
+module "backend_app" {
+  source                       = "./modules/container-app"
+  name                         = local.backend_app_name
+  resource_group_name          = module.resource_group.resource_group_name
+  container_app_environment_id = module.container_app_environment.id
+  identity_id                  = module.managed_identity.id
+  registry_server              = local.registry_server
+  image                        = "${local.registry_server}/the-achievers-backend:${var.backend_image_tag}"
+  target_port                  = 3000
+  external_enabled             = false
+
+  key_vault_secrets = {
+    "database-url" = "${local.key_vault_secrets_url}/database-url"
+    "jwt-secret"   = "${local.key_vault_secrets_url}/jwt-secret"
+  }
+  secret_env = {
+    DATABASE_URL = "database-url"
+    JWT_SECRET   = "jwt-secret"
+  }
+  env = {
+    PORT            = "3000"
+    FRONTEND_ORIGIN = local.frontend_url
+  }
+}
+module "frontend_app" {
+  source                       = "./modules/container-app"
+  name                         = local.frontend_app_name
+  resource_group_name          = module.frontend_resource_group.resource_group_name
+  container_app_environment_id = module.container_app_environment.id
+  identity_id                  = module.managed_identity.id
+  registry_server              = local.registry_server
+  image                        = "${local.registry_server}/the-achievers-frontend:${var.frontend_image_tag}"
+  target_port                  = 3002
+  external_enabled             = true
+
+  key_vault_secrets = {
+    "session-secret" = "${local.key_vault_secrets_url}/session-secret"
+  }
+  secret_env = {
+    SESSION_SECRET = "session-secret"
+  }
+  env = {
+    PORT         = "3002"
+    NODE_ENV     = "production"
+    API_BASE_URL = "https://${module.backend_app.fqdn}"
+  }
 }
