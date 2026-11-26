@@ -189,8 +189,11 @@ it refuses non-local database hosts to avoid migrating the previous database.
 Coordinate the secret change with deployment: changing it too early can disrupt
 the current revision, while deploying with the old URL prevents startup. The
 password in the URL must be percent-encoded if it contains special characters.
-Migrations do not seed data. Adding the sidecar increases the app's resource
-allocation and may incur charges.
+Migrations do not seed data, but `BOOTSTRAP_DATABASE=true` also runs the seed
+below after migrating, so the products and admin account are restored after
+every deployment. In Azure the admin password comes from the `ADMIN-PASSWORD`
+Key Vault secret, which must exist before deploying. Adding the sidecar
+increases the app's resource allocation and may incur charges.
 Users have an auto-incrementing integer `id` primary key, and email addresses
 remain unique. The ID is internal and is not included in registration responses.
 The ID migration preserves existing users and assigns each one an ID.
