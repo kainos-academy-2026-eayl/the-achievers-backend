@@ -82,7 +82,7 @@ module "backend_app" {
   container_app_environment_id = module.container_app_environment.id
   identity_id                  = module.managed_identity.id
   registry_server              = local.registry_server
-  image                        = "${local.registry_server}/the-achievers-backend:${var.image_tag}"
+  image                        = "${local.registry_server}/the-achievers-backend:${var.backend_image_tag}"
   target_port                  = 3000
   external_enabled             = false
 
@@ -106,7 +106,7 @@ module "frontend_app" {
   container_app_environment_id = module.container_app_environment.id
   identity_id                  = module.managed_identity.id
   registry_server              = local.registry_server
-  image                        = "${local.registry_server}/the-achievers-frontend:${var.image_tag}"
+  image                        = "${local.registry_server}/the-achievers-frontend:${var.frontend_image_tag}"
   target_port                  = 3002
   external_enabled             = true
 
