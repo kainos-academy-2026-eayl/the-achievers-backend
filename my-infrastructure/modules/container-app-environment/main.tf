@@ -12,4 +12,9 @@ resource "azurerm_container_app_environment" "this" {
   resource_group_name        = var.resource_group_name
   logs_destination           = "log-analytics"
   log_analytics_workspace_id = azurerm_log_analytics_workspace.this.id
+
+  workload_profile {
+    name                  = "Consumption"
+    workload_profile_type = "Consumption"
+  }
 }

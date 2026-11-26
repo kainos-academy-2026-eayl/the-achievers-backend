@@ -85,18 +85,21 @@ module "backend_app" {
   image                        = "${local.registry_server}/the-achievers-backend:${var.backend_image_tag}"
   target_port                  = 3000
   external_enabled             = false
+  postgres_enabled             = true
 
   key_vault_secrets = {
-    "database-url" = "${local.key_vault_secrets_url}/database-url"
-    "jwt-secret"   = "${local.key_vault_secrets_url}/jwt-secret"
+    "database-url"      = "${local.key_vault_secrets_url}/database-url"
+    "jwt-secret"        = "${local.key_vault_secrets_url}/jwt-secret"
+    "db-admin-password" = "${local.key_vault_secrets_url}/DB-ADMIN-PASSWORD"
   }
   secret_env = {
     DATABASE_URL = "database-url"
     JWT_SECRET   = "jwt-secret"
   }
   env = {
-    PORT            = "3000"
-    FRONTEND_ORIGIN = local.frontend_url
+    BOOTSTRAP_DATABASE = "true"
+    PORT               = "3000"
+    FRONTEND_ORIGIN    = local.frontend_url
   }
 }
 module "frontend_app" {

@@ -5,8 +5,13 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 
-# Skip tools that are only needed for building, not running
-RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev --omit=optional
+# Skip tools that are only needed for building, not running.
+# Installing Prisma downloads the migration engine, so this needs the same
+# extra_ca secret as `prisma generate` below on networks that block downloads.
+RUN --mount=type=cache,target=/root/.npm --mount=type=secret,id=extra_ca \
+    if [ -f /run/secrets/extra_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/extra_ca; fi \
+    && npm ci --omit=dev --omit=optional \
+    && ls node_modules/@prisma/engines/schema-engine-* >/dev/null
 
 # Delete files for databases we don't use, to keep the image small
 RUN find node_modules/@prisma/client/runtime \
@@ -44,6 +49,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
+RUN apk add --no-cache openssl
+
 COPY --from=deps /usr/local/bin/node /usr/local/bin/node
 COPY --from=deps /usr/lib/libstdc++.so.6* /usr/lib/libgcc_s.so.1 /usr/lib/
 
@@ -54,6 +61,8 @@ RUN addgroup -S -g 1000 node && adduser -S -u 1000 -G node -H -s /sbin/nologin n
 COPY package.json ./
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 
 EXPOSE 3000
 
