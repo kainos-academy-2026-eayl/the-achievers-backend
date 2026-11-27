@@ -23,6 +23,18 @@ resource "azurerm_storage_account" "state" {
   location                 = azurerm_resource_group.state.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
+
+  blob_properties {
+    versioning_enabled = true
+
+    delete_retention_policy {
+      days = 30
+    }
+
+    container_delete_retention_policy {
+      days = 30
+    }
+  }
 }
 
 resource "azurerm_storage_container" "state" {
