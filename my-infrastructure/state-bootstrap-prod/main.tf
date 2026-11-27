@@ -23,23 +23,22 @@ resource "azurerm_storage_account" "state" {
   location                 = azurerm_resource_group.state.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
+
+  blob_properties {
+    versioning_enabled = true
+
+    delete_retention_policy {
+      days = 30
+    }
+
+    container_delete_retention_policy {
+      days = 30
+    }
+  }
 }
 
 resource "azurerm_storage_container" "state" {
   name                  = "tfstate"
   storage_account_id    = azurerm_storage_account.state.id
   container_access_type = "private"
-}
-
-resource "azurerm_storage_account_blob_properties" "state" {
-  storage_account_id   = azurerm_storage_account.state.id
-  versioning_enabled  = true
-
-  delete_retention_policy {
-    days = 30
-  }
-
-  container_delete_retention_policy {
-    days = 30
-  }
 }
