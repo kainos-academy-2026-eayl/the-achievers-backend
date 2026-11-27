@@ -30,3 +30,16 @@ resource "azurerm_storage_container" "state" {
   storage_account_id    = azurerm_storage_account.state.id
   container_access_type = "private"
 }
+
+resource "azurerm_storage_account_blob_properties" "state" {
+  storage_account_id   = azurerm_storage_account.state.id
+  versioning_enabled  = true
+
+  delete_retention_policy {
+    days = 30
+  }
+
+  container_delete_retention_policy {
+    days = 30
+  }
+}
